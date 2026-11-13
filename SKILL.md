@@ -6,7 +6,7 @@ whenToUse: 用户要和 TRAE（或另一个编码 agent/另一台机器）分工
 
 # DSH ⇄ TRAE 零成本协作双通道
 
-版本 v0.3.6（tag `v0.3.6`）｜负载 22 文件
+版本 v0.3.7（tag `v0.3.7`）｜负载 22 文件
 
 两条通道分工明确，**不要混用**：
 
@@ -23,7 +23,7 @@ whenToUse: 用户要和 TRAE（或另一个编码 agent/另一台机器）分工
 node "<skill>/assets/init-workspace.mjs" --root "<目标工作区>"
 ```
 
-幂等，已存在即 skip（`--force` 才覆盖工具与文档，永不覆盖 `bus/`、`mailbox/` 里的数据）。安装器会顺带执行一次任务板 `init`（幂等，也可手动 `node tools/bus-cli.mjs init`）。**若 state.json 已损坏，安装器拒绝重建（exit 6）、原文件与备份都保留**，工具照装——数据优先，重建要显式 `init --force`。产出：
+幂等，已存在即 skip（`--force` 才覆盖工具与文档，永不覆盖 `bus/`、`mailbox/` 里的数据）。`--help` 只打印用法、**不落盘**；未知参数或 `--root` 缺值一律 **exit 2**（v0.3.7 起；旧版 `--help` 会把当前目录当成 root 真装一遍）。安装器会顺带执行一次任务板 `init`（幂等，也可手动 `node tools/bus-cli.mjs init`）。**若 state.json 已损坏，安装器拒绝重建（exit 6）、原文件与备份都保留**，工具照装——数据优先，重建要显式 `init --force`。产出：
 
 ```text
 <工作区>/tools/   15 个 .mjs（store / cli / knock-ledger / mailbox / mcp server+client / 两个自检 / init / watchdog / selfwake / nudge / wake-trae / wake-dsh / trae-inject）
@@ -302,7 +302,7 @@ node tools/nudge.mjs --reset               # 清空 watch/nudge.json（不碰任
 安装后自检三条，任一不符就停手：
 
 ```bash
-ls <技能目录> | wc -l                 # 负载文件数（v0.3.5 / v0.3.6 = 22 文件，含 assets/ 15 个 .mjs，无 tools/）
+ls <技能目录> | wc -l                 # 负载文件数（v0.3.5 / v0.3.6 / v0.3.7 = 22 文件，含 assets/ 15 个 .mjs，无 tools/）
 node tools/selftest.mjs               # 期望 ALL PASS 39/39，exit 0
 node tools/mailbox-selftest.mjs       # 期望 ALL PASS 12/12，exit 0
 ```
@@ -311,14 +311,15 @@ node tools/mailbox-selftest.mjs       # 期望 ALL PASS 12/12，exit 0
 
 | 顺序 | 包 | 说明 |
 |---|---|---|
-| 1 | `dsh-trae-channel-v0.3.6.zip` | 当前 |
-| 2 | `dsh-trae-channel-v0.3.5.zip` | 上一版（`wake-dsh` 去掉写死本机路径） |
-| 3 | `dsh-trae-channel-v0.3.4.zip` | 旧仓末版 |
-| 4 | `dsh-trae-channel-v0.3.3.zip` | |
-| 5 | `dsh-trae-channel-v0.3.2.zip` | |
-| 6 | `dsh-trae-channel-v0.3.1.zip` | 字节可复现版 |
-| 7 | `dsh-trae-channel-v0.3.0.zip` | 跨平台正斜杠重生版（98697 B），**不要**用 Release 里 96388 B 的旧 asset 在 macOS/Linux 回滚 |
-| 8 | `dsh-trae-channel-initial-a8f2a83.zip` | 初版（20 条目，`selftest` 27/28 为已知缺陷） |
+| 1 | `dsh-trae-channel-v0.3.7.zip` | 当前（`init-workspace --help` 不再落盘，未知参数 exit 2；README 补「两侧各装一份」） |
+| 2 | `dsh-trae-channel-v0.3.6.zip` | 上一版 |
+| 3 | `dsh-trae-channel-v0.3.5.zip` | （`wake-dsh` 去掉写死本机路径） |
+| 4 | `dsh-trae-channel-v0.3.4.zip` | 旧仓末版 |
+| 5 | `dsh-trae-channel-v0.3.3.zip` | |
+| 6 | `dsh-trae-channel-v0.3.2.zip` | |
+| 7 | `dsh-trae-channel-v0.3.1.zip` | 字节可复现版 |
+| 8 | `dsh-trae-channel-v0.3.0.zip` | 跨平台正斜杠重生版（98697 B），**不要**用 Release 里 96388 B 的旧 asset 在 macOS/Linux 回滚 |
+| 9 | `dsh-trae-channel-initial-a8f2a83.zip` | 初版（20 条目，`selftest` 27/28 为已知缺陷） |
 
 - 装前核 `sha256sum <包>` 与发布记录；装后跑上面两条自检。
 - **渠道边界（公开）**：v0.3.5 起发布在新公开仓 `Myng-i/dsh-trae-channel`，Release 页面按 tag 取包。
