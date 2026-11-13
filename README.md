@@ -20,7 +20,18 @@ node tools/wake-trae.mjs --init                               # 可选：建出�
 node tools/wake-dsh.mjs status                                # 可选：反向叫醒检查（需 DSH 带 --remote-debugging-port=9223 启动）
 ```
 
-作为 DSH skill 使用时，把本目录放到 `~/.dsh/skills/dsh-trae-channel/`。
+### 两侧各装一份（推荐）
+
+DSH 和 TRAE 各自跑各自的命令，所以**两边都装一份**：
+
+| 侧 | 装到 | 谁在跑 |
+|---|---|---|
+| DSH | `~/.dsh/skills/dsh-trae-channel/` | DSH 侧派活、发信、`wake-trae` 叫醒 |
+| TRAE | TRAE 的 skills 目录（Windows 实测 `~/.trae-cn/skills/dsh-trae-channel/`） | TRAE 侧 `bus-cli poll`、`mailbox inbox`、`wake-dsh` 回叫 |
+
+`bus/` 与 `mailbox/` 是**同一份共享数据**（都在协作工作区里），但 `tools/` 下那些脚本每侧要自备一份：只装一侧时另一侧没有可执行的脚本，双通道就退化成「手动读文件」，轮询、领活、叫醒全都跑不起来。
+
+装完各自验一遍：两边分别跑 `node tools/selftest.mjs`（39/39）与 `node tools/mailbox-selftest.mjs`（12/12），都 exit 0 才算两侧就绪。
 
 ## 两条通道
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // init-workspace.mjs — 在目标工作区搭起 DSH ⇄ TRAE 两条通道（任务板 + 信箱）
-// 用法: node init-workspace.mjs [--root <dir>] [--force] [--quiet]
+// 用法: node init-workspace.mjs [--root <dir>] [--force] [--quiet]  （--help 看用法，未知参数 exit 2）
 // 幂等：已存在的文件默认 skip；--force 才覆盖工具与文档（不会覆盖 bus/ 与 mailbox/ 数据）
 
 import fs from "node:fs";
@@ -9,6 +9,37 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url)); // <skill>/assets
 const argv = process.argv.slice(2);
+
+const USAGE = [
+  "用法: node init-workspace.mjs [--root <dir>] [--force] [--quiet]",
+  "",
+  "在 <dir>（默认当前目录）搭起 DSH ⇄ TRAE 两条通道（先确认这是你想装的工作区）:",
+  "  tools/     15 个脚本（任务板 / 信箱 / 叫醒 / 自检）",
+  "  bus/       任务板 state.json",
+  "  mailbox/   信箱 + INDEX.md",
+  "  docs/      接入卡 + 邮政协议",
+  "",
+  "幂等：已存在的文件默认 skip；--force 覆盖工具与文档（不动 bus/ 与 mailbox/ 数据）。",
+  "退出码：0 成功 / 2 参数错 / 6 目标任务板 state.json 损坏（拒绝重建）。",
+].join("\n");
+
+// 参数白名单：--help/-h 只打用法；未知参数直接拒绝（旧版会静默把当前目录当 root 装进去）
+if (argv.includes("--help") || argv.includes("-h")) { console.log(USAGE); process.exit(0); }
+for (let i = 0; i < argv.length; i++) {
+  const a = argv[i];
+  if (a === "--root") {
+    if (!argv[i + 1] || argv[i + 1].startsWith("--")) {
+      console.error("[init] --root 后面要跟一个目录\n\n" + USAGE);
+      process.exit(2);
+    }
+    i++;
+    continue;
+  }
+  if (a === "--force" || a === "--quiet") continue;
+  console.error("[init] 未知参数：" + a + "\n\n" + USAGE);
+  process.exit(2);
+}
+
 const opt = (name, def = null) => {
   const i = argv.indexOf(name);
   return i >= 0 && argv[i + 1] && !argv[i + 1].startsWith("--") ? argv[i + 1] : def;
