@@ -1,0 +1,10 @@
+# 运行期数据（本地才生成，不入库）
+bus/
+mailbox/
+watch/
+.trae-link/
+dist/
+.tmp/
+*.log
+*.corrupt-*
+node_modules/
