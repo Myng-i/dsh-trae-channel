@@ -6,6 +6,8 @@ whenToUse: 用户要和 TRAE（或另一个编码 agent/另一台机器）分工
 
 # DSH ⇄ TRAE 零成本协作双通道
 
+版本 v0.3.6（tag `v0.3.6`）｜负载 22 文件
+
 两条通道分工明确，**不要混用**：
 
 | 通道 | 目录 | 装什么 | 特点 |
@@ -300,7 +302,7 @@ node tools/nudge.mjs --reset               # 清空 watch/nudge.json（不碰任
 安装后自检三条，任一不符就停手：
 
 ```bash
-ls <技能目录> | wc -l                 # 负载文件数（v0.3.x = 22，含 assets/ 15 个 .mjs，无 tools/）
+ls <技能目录> | wc -l                 # 负载文件数（v0.3.5 / v0.3.6 = 22 文件，含 assets/ 15 个 .mjs，无 tools/）
 node tools/selftest.mjs               # 期望 ALL PASS 39/39，exit 0
 node tools/mailbox-selftest.mjs       # 期望 ALL PASS 12/12，exit 0
 ```
@@ -309,12 +311,19 @@ node tools/mailbox-selftest.mjs       # 期望 ALL PASS 12/12，exit 0
 
 | 顺序 | 包 | 说明 |
 |---|---|---|
-| 1 | `dsh-trae-channel-v0.3.2.zip` | 当前 |
-| 2 | `dsh-trae-channel-v0.3.1.zip` | 字节可复现版 |
-| 3 | `dsh-trae-channel-v0.3.0.zip` | 跨平台正斜杠重生版（98697 B），**不要**用 Release 里 96388 B 的旧 asset 在 macOS/Linux 回滚 |
-| 4 | `dsh-trae-channel-initial-a8f2a83.zip` | 初版（27/28 为已知缺陷，见其 README） |
+| 1 | `dsh-trae-channel-v0.3.6.zip` | 当前 |
+| 2 | `dsh-trae-channel-v0.3.5.zip` | 上一版（`wake-dsh` 去掉写死本机路径） |
+| 3 | `dsh-trae-channel-v0.3.4.zip` | 旧仓末版 |
+| 4 | `dsh-trae-channel-v0.3.3.zip` | |
+| 5 | `dsh-trae-channel-v0.3.2.zip` | |
+| 6 | `dsh-trae-channel-v0.3.1.zip` | 字节可复现版 |
+| 7 | `dsh-trae-channel-v0.3.0.zip` | 跨平台正斜杠重生版（98697 B），**不要**用 Release 里 96388 B 的旧 asset 在 macOS/Linux 回滚 |
+| 8 | `dsh-trae-channel-initial-a8f2a83.zip` | 初版（20 条目，`selftest` 27/28 为已知缺陷） |
 
 - 装前核 `sha256sum <包>` 与发布记录；装后跑上面两条自检。
+- **渠道边界（公开）**：v0.3.5 起发布在新公开仓 `Myng-i/dsh-trae-channel`，Release 页面按 tag 取包。
+- **私有归档（勿公开）**：v0.3.0–v0.3.4 的包只在旧仓（private，现名 `dsh-trae-channel-archive`）的 Release 里；v0.3.4 及更早包含本机路径，**不得公开**，也别照文件名跨渠道找。
+- **权威顺序**：以本节为准；`dist/README.md` 为逐行镜像，发版时同步，冲突以本节为准；Release tag 指向本节所在版本的包。
 - **旧 `Compress-Archive` 包（v0.3.0 原件 18/22、初版原件 16/20 条反斜杠路径）在 macOS/Linux 会解出文件名带反斜杠的怪文件**——只作存档，不用于跨平台回滚。
 - 回滚同样属于安装动作：先说明、后动手，并保留被替换目录的备份。
 
