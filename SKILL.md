@@ -334,8 +334,8 @@ node tools/mailbox-selftest.mjs       # 期望 ALL PASS 12/12，exit 0
 | 1 | `dsh-trae-channel-v0.3.8.zip` | 当前（新增 CDP 启动器 `launch-cdp.mjs` + `start-cdp.cmd`/`restart-cdp.cmd` + 启动器参考文档；可执行文件路径走 `cdp/launch.config.json`） |
 | 2 | `dsh-trae-channel-v0.3.7.zip` | `init-workspace --help` 不落盘、未知参数 exit 2；README 补「两侧各装一份」 |
 | 3 | `dsh-trae-channel-v0.3.6.zip` | |
-| 4 | `dsh-trae-channel-v0.3.5.zip` | `wake-dsh` 去掉写死本机路径 |
-| 5 | `dsh-trae-channel-v0.3.4.zip` | 旧仓末版 |
+| 4 | `dsh-trae-channel-v0.3.5.zip` | `wake-dsh` 的默认路径可配置 |
+| 5 | `dsh-trae-channel-v0.3.4.zip` | 历史版本 |
 | 6 | `dsh-trae-channel-v0.3.3.zip` | |
 | 7 | `dsh-trae-channel-v0.3.2.zip` | |
 | 8 | `dsh-trae-channel-v0.3.1.zip` | 字节可复现版 |
@@ -344,7 +344,7 @@ node tools/mailbox-selftest.mjs       # 期望 ALL PASS 12/12，exit 0
 
 - 装前核 `sha256sum <包>` 与发布记录；装后跑上面两条自检。
 - **渠道边界（公开）**：v0.3.5 起发布在新公开仓 `Myng-i/dsh-trae-channel`，Release 页面按 tag 取包。
-- **私有归档（勿公开）**：v0.3.0–v0.3.4 的包只在旧仓（private，现名 `dsh-trae-channel-archive`）的 Release 里；v0.3.4 及更早包含本机路径，**不得公开**，也别照文件名跨渠道找。
+- v0.3.0–v0.3.4 的发布包不在本仓 Release；需要这些版本时联系维护者，别按文件名跨渠道找。
 - **权威顺序**：以本节为准；`dist/README.md` 为逐行镜像，发版时同步，冲突以本节为准；Release tag 指向本节所在版本的包。
 - **旧 `Compress-Archive` 包（v0.3.0 原件 18/22、初版原件 16/20 条反斜杠路径）在 macOS/Linux 会解出文件名带反斜杠的怪文件**——只作存档，不用于跨平台回滚。
 - 回滚同样属于安装动作：先说明、后动手，并保留被替换目录的备份。
