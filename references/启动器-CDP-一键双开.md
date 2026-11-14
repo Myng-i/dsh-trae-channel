@@ -41,8 +41,8 @@ node tools/launch-cdp.mjs --dsh-port 9333 --trae-port 9332 --dsh-user-data-dir .
 2. 环境变量 `DSH_EXE` / `TRAE_EXE`
 3. **`<工作区>/cdp/launch.config.json`**（推荐，`cdp/` 默认 gitignore，机器相关路径不进包）
    ```json
-   { "dshExe": "D:/TOOL/deepseek-harness/DeepSeek Harness.exe",
-     "traeExe": "D:/software/Trae CN/Trae CN.exe" }
+   { "dshExe": "C:/Program Files/DeepSeek Harness/DeepSeek Harness.exe",
+     "traeExe": "C:/Program Files/Trae/Trae CN.exe" }
    ```
 4. 正在运行的进程路径（Windows）
 5. 常见安装路径（`%LOCALAPPDATA%\Programs\…`、`%ProgramFiles%\…`）

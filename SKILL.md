@@ -202,8 +202,8 @@ node tools/selfwake.mjs notify off            # 只巡检、不叫醒 TRAE（TRA
 
 可执行文件按「`--dsh-exe`/`--trae-exe` → 环境变量 `DSH_EXE`/`TRAE_EXE` → **`cdp/launch.config.json`** → 运行进程路径 → 常见安装路径 → PATH」查找。机器相关路径写进配置（`cdp/` 默认 gitignore，不进包）：
 
-    { "dshExe": "D:/TOOL/deepseek-harness/DeepSeek Harness.exe",
-      "traeExe": "D:/software/Trae CN/Trae CN.exe" }
+    { "dshExe": "C:/Program Files/DeepSeek Harness/DeepSeek Harness.exe",
+      "traeExe": "C:/Program Files/Trae/Trae CN.exe" }
 
 三种状态：**ready**（只体检）/ **needs_restart**（在跑没端口，默认 exit 3 且**绝不杀进程**，`--restart` 才关）/ **not running**（带端口启动）。退出码：0 就绪 / 2 参数 / 3 在跑无端口或端口被占 / 4 找不到 exe / 5 启动后超时 / 6 探针失败 / 7 端口被别的程序占用。
 

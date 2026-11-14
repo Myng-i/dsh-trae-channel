@@ -17,7 +17,7 @@ const USAGE = [
   "  tools/     16 个脚本（任务板 / 信箱 / 叫醒 / 自检 / CDP 启动器）",
   "  bus/       任务板 state.json",
   "  mailbox/   信箱 + INDEX.md",
-  "  docs/      接入卡 + 邮政协议 + 启动器说明",
+  "  docs/      references/ 下的参考文档（协议 / 接入卡 / 启动器 / 实测证据）",
   "  start-cdp.cmd / restart-cdp.cmd  双击入口（Windows；带 CDP 端口启动 DSH + TRAE）",
   "",
   "幂等：已存在的文件默认 skip；--force 覆盖工具与文档（不动 bus/ 与 mailbox/ 数据）。",
@@ -115,7 +115,11 @@ const findDoc = (name) => {
   }
   return null;
 };
-for (const name of ["邮政协议-v0.2.md", "TRAE侧-接入卡.md", "启动器-CDP-一键双开.md"]) {
+// 文档清单从来源目录实际读出（不再写死 3 个：曾漏掉 实测证据.md，导致包布局自检 39/40）
+const docDirsSeen = DOC_DIRS.filter((d) => fs.existsSync(d));
+const docNames = [...new Set(docDirsSeen.flatMap((d) => fs.readdirSync(d).filter((n) => n.endsWith(".md"))))].sort();
+const DOC_FALLBACK = ["邮政协议-v0.2.md", "TRAE侧-接入卡.md", "启动器-CDP-一键双开.md"];
+for (const name of docNames.length ? docNames : DOC_FALLBACK) {
   const dst = path.join(ROOT, "docs", name);
   if (fs.existsSync(dst) && !FORCE) { skipped++; log("  skip   docs/" + name); continue; }
   const src = findDoc(name);
