@@ -41,7 +41,7 @@ node tools/mailbox.mjs inbox --as trae-ide --advance
 - `poll` 有活返回任务 JSON 并已领；没活：`{"task":null,"reason":"no_task"}`，**exit 0**（空转不算失败）
 - 读某封：`node tools/mailbox.mjs read <id>`；回信：`node tools/mailbox.mjs reply <id> --from trae-ide --body-file reply.md`
 
-### 1.1 命令必须指向「对方那一份」目录（v0.3.11 起叫醒文案已给绝对路径）
+### 1.1 命令必须指向「对方那一份」目录（v0.3.11 起叫醒文案已给绝对路径，v0.3.12 起读命令不建目录）
 
 上面两条默认按**你当前目录**找 `bus/` 与 `mailbox/`。如果你的 cwd 不是派活方的工作区，就必须显式传目录，否则会读到**你自己 cwd 下的另一块板/另一个信箱**，表现就是「对方说发了信，你说没有」。
 
@@ -53,6 +53,7 @@ node "<工作区>/tools/mailbox.mjs" inbox --as trae-ide --advance --dir "<工�
 - 被 CDP 叫醒时，**文案里写的绝对路径就是权威**，照抄执行即可；别改回相对路径。
 - `--bus <dir>`：解析参数前 re-exec 一次把 `BUS_DIR` 注入子进程（环境已指向同一块板时只剥掉参数）；`--dir <dir>`：覆盖 `MAILBOX_DIR`，再退到 `<cwd>/mailbox`。
 - 真实事故（2026-11-14）：叫醒文案只写 `inbox --advance`，TRAE 在自己 cwd 下跑，读到了 DSH-TRAE 工作区的信箱，回「没有这封」。
+- 读命令（`inbox` / `read` / `threads` / `knock`）遇到不存在的信箱一律 **exit 5** 并打印路径与 `--dir` 示例，**不会就地建空信箱**——所以「exit 5」几乎总是意味着你 cwd 不对或 `--dir` 指错了，不是「没有信」。
 
 ## 2. 短轮询（仅在你愿意让这一轮最多等 30s 时）
 
@@ -174,7 +175,7 @@ node tools/mailbox-selftest.mjs    :: 12 项：空正文、并发 id、游标、
 
 ### 10.3 本文档第 8 节自检条目数已过期
 
-- 第 8 节写 `selftest 12 项`、`mailbox-selftest 6 项`；**当前实际为 41/41 与 12/12**（含自唤醒熔断、drill 隔离、游标语义、`Re:` 去重、安装器产出、出站叫醒等）。已于 2026-11-13 校齐。
+- 第 8 节写 `selftest 12 项`、`mailbox-selftest 6 项`；**当前实际为 41/41 与 14/14**（含自唤醒熔断、drill 隔离、游标语义、`Re:` 去重、安装器产出、出站叫醒等）。已于 2026-11-13 校齐。
 
 ### 10.4 唤醒对「已通知过的 id」没有去重（2026-11-13 01:4x 观测）
 

@@ -6,7 +6,7 @@ whenToUse: 用户要和 TRAE（或另一个编码 agent/另一台机器）分工
 
 # DSH ⇄ TRAE 零成本协作双通道
 
-版本 v0.3.11（tag `v0.3.11`）｜负载 26 文件
+版本 v0.3.12（tag `v0.3.12`）｜负载 26 文件
 
 两条通道分工明确，**不要混用**：
 
@@ -36,7 +36,7 @@ node "<skill>/assets/init-workspace.mjs" --root "<目标工作区>"
 
 ```bash
 node tools/selftest.mjs            # 41/41（含只读不落盘、损坏拒绝重建、MCP 三传输、自唤醒熔断、CDP 端口发现、安装器产出可运行、wake-trae、出站口唯一化、wake-dsh、--wake 取号与自派跳过、门铃账本损坏守卫、launcher 参数守卫、跨工作区绝对路径）
-node tools/mailbox-selftest.mjs    # 12/12（含并发 id 唯一、游标语义、空正文、Re: 去重、--wake 干跑、自发信不敲门）
+node tools/mailbox-selftest.mjs    # 14/14（含并发 id 唯一、游标语义、空正文、Re: 去重、--wake 干跑、自发信不敲门、读命令不建信箱）
 ```
 
 Windows 上 node 不在 PATH 时用绝对路径，例如
@@ -52,7 +52,7 @@ node tools/mailbox.mjs inbox --as <身份> --advance       # 只推进主会话�
 - `poll` 不阻塞、没活返回 `{"task":null,"reason":"no_task"}`（exit 0）。**别用 `wait` 空转**：没有常驻进程时它会占住一整轮对话。
 - `--advance` 把 `mailbox/.cursor-<身份>` 推到**本轮列出的最大 id**；空轮不推进。子代理一律用 `inbox --after <id>` 只读，**不许写游标**。
 
-### 2.1 跨工作区：命令必须带绝对路径（v0.3.11 起文案已内置）
+### 2.1 跨工作区：命令必须带绝对路径（v0.3.11 起文案已内置，v0.3.12 起读命令不建目录）
 
 两个脚本默认按**当前目录**找 `bus/` 与 `mailbox/`。执行端的 cwd 常常不是派活方的工作区（TRAE 被叫醒时坐在它自己的项目目录里），用相对路径就会读到**另一块板、另一个信箱**——症状是「信明明写了，对方说找不到」。
 
@@ -64,6 +64,7 @@ node "<工作区>/tools/mailbox.mjs" inbox --as <身份> --advance --dir "<工�
 - 被 CDP 叫醒时，**叫醒文案里的绝对路径就是权威**：照抄执行，别改回自己 cwd 下的 `bus/`、`mailbox/`。
 - `--bus <dir>` 在解析参数前 re-exec 一次，把 `BUS_DIR` 注入子进程（环境已指向同一块板时只把参数剥掉）；`--dir <dir>` 覆盖 `MAILBOX_DIR`，再退到 `<cwd>/mailbox`。
 - 真实事故（2026-11-14）：叫醒文案只写 `mailbox inbox --as trae-ide --advance`，TRAE 在自己 cwd 下跑，读到了 DSH-TRAE 工作区的信箱，回「信箱里没有这封」。
+- **读命令不再造目录**：`inbox` / `read` / `threads` / `knock` 发现信箱不存在时打三条提示并 `exit 5`（路径、`--dir` 绝对路径示例、「不替你建空信箱」），不会就地建出一个空信箱把「cwd 错了」伪装成「没有信」。写命令（`post` / `reply` / `index`）才会建目录，`--help` 不落盘。
 
 ## 三、派活（任务板）
 
@@ -335,28 +336,29 @@ node tools/nudge.mjs --reset               # 清空 watch/nudge.json（不碰任
 安装后自检三条，任一不符就停手：
 
 ```bash
-ls <技能目录> | wc -l                 # 负载文件数（v0.3.5 / v0.3.6 / v0.3.7 = 22；v0.3.8 / v0.3.9 / v0.3.10 / v0.3.11 = 26 文件，含 assets/ 16 个 .mjs + 2 个 .cmd，无 tools/）
+ls <技能目录> | wc -l                 # 负载文件数（v0.3.5 / v0.3.6 / v0.3.7 = 22；v0.3.8–v0.3.12 = 26 文件，含 assets/ 16 个 .mjs + 2 个 .cmd，无 tools/）
 node tools/selftest.mjs               # 期望 ALL PASS 41/41，exit 0
-node tools/mailbox-selftest.mjs       # 期望 ALL PASS 12/12，exit 0
+node tools/mailbox-selftest.mjs       # 期望 ALL PASS 14/14，exit 0
 ```
 
 **回滚顺序**（按版本号取包，别用不带版本号的通用名）：
 
 | 顺序 | 包 | 说明 |
 |---|---|---|
-| 1 | `dsh-trae-channel-v0.3.11.zip` | 当前（`trae-inject send` 关闭 socket 后显式 `exit 0`，修「已送达却报未送达」；`wake-trae` 叫醒文案带「交付后必须回唤 DSH」契约；叫醒文案与 `mailbox`/`bus-cli` 全面改用绝对路径 `--dir`/`--bus`，修「执行端读到自己 cwd 下的另一份信箱/任务板」；接入卡 §11.4 由待定改为已启用） |
-| 2 | `dsh-trae-channel-v0.3.10.zip` | `SKILL.md` §一 安装布局的 `docs/` 说明补全为 4 个参考文档；纯文档修正 |
-| 3 | `dsh-trae-channel-v0.3.9.zip` | `init` 的文档清单改为按来源目录 `references/*.md` 实读，修掉包布局自检 39/40；`launch.config.json` 示例路径通用化 |
-| 4 | `dsh-trae-channel-v0.3.8.zip` | 新增 CDP 启动器 `launch-cdp.mjs` + `start-cdp.cmd`/`restart-cdp.cmd` + 启动器参考文档；可执行文件路径走 `cdp/launch.config.json` |
-| 5 | `dsh-trae-channel-v0.3.7.zip` | `init-workspace --help` 不落盘、未知参数 exit 2；README 补「两侧各装一份」 |
-| 6 | `dsh-trae-channel-v0.3.6.zip` | |
-| 7 | `dsh-trae-channel-v0.3.5.zip` | `wake-dsh` 的默认路径可配置 |
-| 8 | `dsh-trae-channel-v0.3.4.zip` | 历史版本 |
-| 9 | `dsh-trae-channel-v0.3.3.zip` | |
-| 10 | `dsh-trae-channel-v0.3.2.zip` | |
-| 11 | `dsh-trae-channel-v0.3.1.zip` | 字节可复现版 |
-| 12 | `dsh-trae-channel-v0.3.0.zip` | 跨平台正斜杠重生版（98697 B），**不要**用 Release 里 96388 B 的旧 asset 在 macOS/Linux 回滚 |
-| 13 | `dsh-trae-channel-initial-a8f2a83.zip` | 初版（20 条目，`selftest` 27/28 为已知缺陷） |
+| 1 | `dsh-trae-channel-v0.3.12.zip` | 当前（`mailbox` 读命令遇到不存在的信箱改为 `exit 5` 并给绝对路径提示，不再静默建空信箱；`wake-trae` 叫醒文案的绝对路径提醒加粗并写明后果；`mailbox-selftest` 12 → 14 项） |
+| 2 | `dsh-trae-channel-v0.3.11.zip` | 当前（`trae-inject send` 关闭 socket 后显式 `exit 0`，修「已送达却报未送达」；`wake-trae` 叫醒文案带「交付后必须回唤 DSH」契约；叫醒文案与 `mailbox`/`bus-cli` 全面改用绝对路径 `--dir`/`--bus`，修「执行端读到自己 cwd 下的另一份信箱/任务板」；接入卡 §11.4 由待定改为已启用） |
+| 3 | `dsh-trae-channel-v0.3.10.zip` | `SKILL.md` §一 安装布局的 `docs/` 说明补全为 4 个参考文档；纯文档修正 |
+| 4 | `dsh-trae-channel-v0.3.9.zip` | `init` 的文档清单改为按来源目录 `references/*.md` 实读，修掉包布局自检 39/40；`launch.config.json` 示例路径通用化 |
+| 5 | `dsh-trae-channel-v0.3.8.zip` | 新增 CDP 启动器 `launch-cdp.mjs` + `start-cdp.cmd`/`restart-cdp.cmd` + 启动器参考文档；可执行文件路径走 `cdp/launch.config.json` |
+| 6 | `dsh-trae-channel-v0.3.7.zip` | `init-workspace --help` 不落盘、未知参数 exit 2；README 补「两侧各装一份」 |
+| 7 | `dsh-trae-channel-v0.3.6.zip` | |
+| 8 | `dsh-trae-channel-v0.3.5.zip` | `wake-dsh` 的默认路径可配置 |
+| 9 | `dsh-trae-channel-v0.3.4.zip` | 历史版本 |
+| 10 | `dsh-trae-channel-v0.3.3.zip` | |
+| 11 | `dsh-trae-channel-v0.3.2.zip` | |
+| 12 | `dsh-trae-channel-v0.3.1.zip` | 字节可复现版 |
+| 13 | `dsh-trae-channel-v0.3.0.zip` | 跨平台正斜杠重生版（98697 B），**不要**用 Release 里 96388 B 的旧 asset 在 macOS/Linux 回滚 |
+| 14 | `dsh-trae-channel-initial-a8f2a83.zip` | 初版（20 条目，`selftest` 27/28 为已知缺陷） |
 
 - 装前核 `sha256sum <包>` 与发布记录；装后跑上面两条自检。
 - **渠道边界（公开）**：v0.3.5 起发布在新公开仓 `Myng-i/dsh-trae-channel`，Release 页面按 tag 取包。

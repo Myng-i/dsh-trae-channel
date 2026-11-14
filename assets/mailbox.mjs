@@ -43,7 +43,20 @@ const DIR_OPT = opt("dir");
 if (DIR_OPT === true) { console.error("[mailbox] --dir 需要目录，例如 --dir <工作区>/mailbox"); process.exit(2); }
 const ROOT = path.resolve(String(DIR_OPT || process.env.MAILBOX_DIR || path.join(process.cwd(), "mailbox")));
 const INDEX = path.join(ROOT, "INDEX.md");
-fs.mkdirSync(ROOT, { recursive: true });
+const SELF = path.join(HERE, "mailbox.mjs");
+// 读命令不建目录：cwd 不对时静默建出一个空信箱，「没信」就是假象（TRAE 复验抓过）。
+function ensureRootForWrite() {
+  if (!fs.existsSync(ROOT)) fs.mkdirSync(ROOT, { recursive: true });
+}
+function requireRoot(cmdName) {
+  let st = null;
+  try { st = fs.statSync(ROOT); } catch {}
+  if (st && st.isDirectory()) return;
+  console.error((st ? "[mailbox] 信箱路径不是目录：" : "[mailbox] 信箱不存在：") + ROOT);
+  console.error("[mailbox] 若信件在别的工作区，用绝对路径：node \"" + SELF + "\" " + cmdName + " --dir \"<工作区>/mailbox\" ...");
+  console.error("[mailbox] 这里不替你建空信箱：读不到信通常说明 cwd 不对（也可能信还没到）。");
+  process.exit(5);
+}
 // 敲门（CDP）：只发「引用 id 的提醒」，不承载正文。正文永远在 mailbox/ 里。
 // --wake 把「落盘」与「敲门」合成一步，消除「先敲门、后投件」的时序竞态（TRAE 曾因此在 inbox 里查不到）。
 function knockTrae({ id, subject, to, from }) {
@@ -190,12 +203,13 @@ if (cmd === "--help" || cmd === "-h" || cmd === "help") {
     "  threads [--json]",
     "  index",
     "",
-    "  退出码：0 成功；1 信件不存在；4 空正文被拒；5 游标/唯一 id 失败。"].join("\n"));
+    "  退出码：0 成功；1 信件不存在；2 参数错；4 空正文被拒；5 信箱不存在（读命令不建目录）/ 游标或唯一 id 失败；6 门铃账本损坏。"].join("\n"));
   process.exit(0);
 }
 
 switch (cmd) {
   case "post": {
+    ensureRootForWrite();
     let inline = {};
     if (opt("stdin")) {
       const raw = fs.readFileSync(0, "utf8").replace(/^\uFEFF/, "");
@@ -225,6 +239,7 @@ switch (cmd) {
     break;
   }
   case "knock": {
+    requireRoot("knock");
     // 补敲门：给一封已存在的信重发提醒（不会重复，除非删 ledger 或 --wake-force 前先清）
     const id = positional[0];
     if (!id) { console.error("[mailbox] 用法: knock <信件id> [--wake-force]"); process.exit(2); }
@@ -238,6 +253,7 @@ switch (cmd) {
     process.exit(0);
   }
   case "inbox": {
+    requireRoot("inbox");
     const me = opt("as") || process.env.AGENT_NAME || "unknown";
     const advance = opt("advance") === true;
     let after = opt("after");
@@ -262,6 +278,7 @@ switch (cmd) {
     break;
   }
   case "read": {
+    requireRoot("read");
     const id = positional[0];
     const l = letters().find((x) => x.id === id || x.id.startsWith(id));
     if (!l) { console.error("no such letter: " + id); process.exit(1); }
@@ -269,6 +286,7 @@ switch (cmd) {
     break;
   }
   case "reply": {
+    requireRoot("reply");
     const id = positional[0];
     const orig = letters().find((x) => x.id === id || x.id.startsWith(id));
     if (!orig) { console.error("no such letter: " + id); process.exit(1); }
@@ -289,6 +307,7 @@ switch (cmd) {
     break;
   }
   case "threads": {
+    requireRoot("threads");
     const all = letters();
     const map = new Map();
     for (const l of all) {
@@ -301,6 +320,7 @@ switch (cmd) {
     break;
   }
   case "index":
+    ensureRootForWrite();
     buildIndex();
     console.log("index rebuilt: " + INDEX);
     break;

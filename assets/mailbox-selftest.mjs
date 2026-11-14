@@ -2,10 +2,11 @@
 /**
  * mailbox-selftest.mjs — 信箱自检（临时 MAILBOX_DIR，不碰正式信箱）
  *
- *   node tools/mailbox-selftest.mjs            # 9 项，全 PASS 即协议可用
+ *   node tools/mailbox-selftest.mjs            # 14 项，全 PASS 即协议可用
  *   node tools/mailbox-selftest.mjs --keep     # 保留临时目录看现场
  *
- * 覆盖协议 v0.2 的硬保证：正文不可为空 / id 并发唯一（wx 独占创建）/ 游标推进 / --after 增量。
+ * 覆盖协议 v0.2 的硬保证：正文不可为空 / id 并发唯一（wx 独占创建）/ 游标推进 / --after 增量 /
+ * 读命令信箱不存在时不建目录（exit 5）。
  * 退出码：0 全通过，1 有失败。
  */
 import { execFile } from "node:child_process";
@@ -159,6 +160,31 @@ k1.code === 0 && /隔离信箱/.test(k1.err) && !/would knock/.test(k1.out) && /
   ? ok("幽灵 id 守卫 + 去重", "隔离默认不敲 / --wake-force 干跑 / ledger 命中跳过")
   : bad("幽灵 id 守卫 + 去重", JSON.stringify({ post: k1.err.trim().slice(0, 50), force: /would knock/.test(k3.out), dup: k4.err.trim().slice(0, 50) }));
 try { fs.rmSync(d7, { recursive: true, force: true }); } catch {}
+
+// 13. 读命令遇到不存在的信箱：exit 5 且不建目录（cwd 错了不能静默造出一个空信箱）
+const d8 = fs.mkdtempSync(path.join(os.tmpdir(), "mailbox-nodir-"));
+const noBox = path.join(d8, "no-such", "mailbox");
+const run8 = (args) => new Promise((resolve) => {
+  execFile(process.execPath, [MB, ...args, "--dir", noBox], { env, timeout: 20000 },
+    (e, so, se) => resolve({ code: e ? (e.code ?? 1) : 0, out: String(so || ""), err: String(se || "") }));
+});
+const rd1 = await run8(["inbox", "--as", "trae-ide", "--advance"]);
+const rd2 = await run8(["read", "20260101-0000-001"]);
+const rd3 = await run8(["threads"]);
+const rd4 = await run8(["knock", "20260101-0000-001"]);
+const noDirMade = !fs.existsSync(path.dirname(noBox));
+[rd1, rd2, rd3, rd4].every((r) => r.code === 5) && /信箱不存在/.test(rd1.err) && /--dir/.test(rd1.err) && noDirMade
+  ? ok("读命令信箱不存在 exit 5", "inbox/read/threads/knock 全 5，未建目录")
+  : bad("读命令信箱不存在 exit 5", "codes " + [rd1, rd2, rd3, rd4].map((r) => r.code).join(",") + " dirMade=" + !noDirMade + " err=" + rd1.err.trim().slice(0, 60));
+
+// 14. --help 不建目录；写命令仍会建（读严写宽必须是同一个闸门的两侧）
+const hp = await run8(["--help"]);
+const madeByHelp = fs.existsSync(path.dirname(noBox));   // 必须在 post 之前取，否则测的是 post 建的目录
+const wr = await run8(["post", "--from", "dsh-lead", "--to", "trae-ide", "--subject", "建目录", "--body", "写命令应当建出信箱目录，正文长度足够通过校验"]);
+hp.code === 0 && !madeByHelp && wr.code === 0 && fs.existsSync(noBox)
+  ? ok("--help 不建目录 / post 建目录", "读不落盘，写才落盘")
+  : bad("--help 不建目录 / post 建目录", "help=" + hp.code + " helpMade=" + madeByHelp + " post=" + wr.code + " postMade=" + fs.existsSync(noBox));
+try { fs.rmSync(d8, { recursive: true, force: true }); } catch {}
 
 setTimeout(() => {
   if (!process.argv.includes("--keep")) { try { fs.rmSync(DIR, { recursive: true, force: true }); fs.rmSync(d2, { recursive: true, force: true }); fs.rmSync(d3, { recursive: true, force: true }); fs.rmSync(d4, { recursive: true, force: true }); fs.rmSync(d5, { recursive: true, force: true }); fs.rmSync(d6, { recursive: true, force: true }); } catch {} }

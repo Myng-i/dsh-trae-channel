@@ -130,7 +130,7 @@ const text = "【DSH 叫醒】新到 " + items.length + " 件：" + head + (item
   "。工作区：\"" + ROOT + "\"。" +
   "领取：node \"" + BUS_CLI + "\" poll --as trae-ide --claim --bus \"" + path.join(ROOT, "bus") + "\"；" +
   "读信：node \"" + MBOX + "\" inbox --as trae-ide --advance --dir \"" + path.join(ROOT, "mailbox") + "\"。" +
-  "请以这些绝对路径为准，不要用你自己 cwd 下的 bus/ 或 mailbox/。" +
+  "**请以这些绝对路径为准，不要用你自己 cwd 下的 bus/ 或 mailbox/** —— cwd 错了读的是别人的板/信箱，而且不会报错，你会以为没活。" +
   "交付/回信后必须回唤 DSH：node \"" + WAKE_DSH + "\" send --text-file <你写的摘要.txt>（CDP 9223；不叫醒 DSH 就不知道你完工）。";
 
 if (DRY) { console.log("[wake] --dry，将注入：\n" + text); process.exit(0); }
