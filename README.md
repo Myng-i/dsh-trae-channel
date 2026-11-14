@@ -15,10 +15,13 @@ node assets/init-workspace.mjs --root /path/to/workspace     # 幂等，已存�
 cd /path/to/workspace
 node tools/watchdog.mjs --init && node tools/watchdog.mjs --once --toast   # 可选：只读看门狗
 node tools/selfwake.mjs status                                                  # 可选：自唤醒（默认 OFF，需用户要求才 enable）
-node tools/selftest.mjs && node tools/mailbox-selftest.mjs    # 39/39 与 12/12 全绿才算就绪
+node tools/selftest.mjs && node tools/mailbox-selftest.mjs    # 40/40 与 12/12 全绿才算就绪
 node tools/wake-trae.mjs --init                               # 可选：建出站叫醒基线（派活后主动叫醒 TRAE）
 node tools/wake-dsh.mjs status                                # 可选：反向叫醒检查（需 DSH 带 --remote-debugging-port=9223 启动）
+start-cdp.cmd                                                 # 可选：Windows 一键带 CDP 端口启动 DSH + TRAE（restart-cdp.cmd 重启）
 ```
+
+启动器读 `cdp/launch.config.json`（`{"dshExe":"…","traeExe":"…"}`）定位两端的可执行文件；没配就按「运行中进程 → 常见安装路径 → PATH」猜。详见 [references/启动器-CDP-一键双开.md](references/启动器-CDP-一键双开.md)。
 
 ### 两侧各装一份（推荐）
 
@@ -31,7 +34,7 @@ DSH 和 TRAE 各自跑各自的命令，所以**两边都装一份**：
 
 `bus/` 与 `mailbox/` 是**同一份共享数据**（都在协作工作区里），但 `tools/` 下那些脚本每侧要自备一份：只装一侧时另一侧没有可执行的脚本，双通道就退化成「手动读文件」，轮询、领活、叫醒全都跑不起来。
 
-装完各自验一遍：两边分别跑 `node tools/selftest.mjs`（39/39）与 `node tools/mailbox-selftest.mjs`（12/12），都 exit 0 才算两侧就绪。
+装完各自验一遍：两边分别跑 `node tools/selftest.mjs`（40/40）与 `node tools/mailbox-selftest.mjs`（12/12），都 exit 0 才算两侧就绪。
 
 ## 两条通道
 
@@ -69,9 +72,11 @@ DSH 和 TRAE 各自跑各自的命令，所以**两边都装一份**：
 
 ## 协议与接入
 
+- 启动器（Windows）：[references/启动器-CDP-一键双开.md](references/启动器-CDP-一键双开.md)（一键双开、端口、退出码、加固与排错）
 - 协议：[references/邮政协议-v0.2.md](references/邮政协议-v0.2.md)（已冻结）
 - 执行端接入：[references/TRAE侧-接入卡.md](references/TRAE侧-接入卡.md)
 
+- `launch-cdp.mjs` — 可选（Windows）：一键带 CDP 端口启动 DSH（9223）与 TRAE（9222），三状态判定（ready / needs_restart / absent），找不到 exe 或端口超时给明确退出码；macOS / Linux 没有等价启动器，需手工加 `--remote-debugging-port`。
 - `trae-inject.mjs` — 可选：CDP 后台叫醒（`send`/`read`/`status`），需 TRAE 带 `--remote-debugging-port` 启动（端口也支持自动发现）；叫醒本身用 `wake-trae`（见下）。
 - `wake-trae.mjs` — 可选：**出站**叫醒。派完活跑一条，把「指派给对方的 pending 任务 + 新信」合成一条【DSH 叫醒】注入它的聊天框；成功才推进 `watch/traeWake.json`。`selfwake notify on`（默认）让「自唤醒 → 看门狗扫描 → wake-trae」成链；出站口只有这一个。
 - `nudge.mjs` — 可选：**催办**。两边都没有后台守护，任务做到一半停下时没人发现；它按时间判停滞（默认 10min），给 `pending/claimed` 的活喂一条【DSH 催办】，同一项最多 3 次，催满就报「需人工介入」。只读任务板、不 claim、不改状态。注意 `selfwake enable` 会顺带开启自动催办（`notify off` 可关）；门铃账本读写两侧共享（wake-trae 读、nudge 写，2 分钟内不重复注入）；账本损坏时 `knock` 以 exit 6 拒绝敲门，原文件不动。
@@ -83,12 +88,12 @@ DSH 和 TRAE 各自跑各自的命令，所以**两边都装一份**：
 
 ```bash
 # 从 tag 重建（推荐：取 git blob，不受工作树换行影响）
-node release/build-zip.mjs --ref v0.3.1 --out ../dist/dsh-trae-channel-v0.3.1.zip
+node release/build-zip.mjs --ref v0.3.8 --out ../dist/dsh-trae-channel-v0.3.8.zip
 # 从当前工作树构建（开发自查）
 node release/build-zip.mjs --worktree --out ../dist/dev.zip
 ```
 
-包内只放技能负载（`SKILL.md`、`README.md`、`LICENSE`、`.gitignore`、`assets/**`、`references/**`，共 22 个文件）；`.gitattributes` 与 `release/` 是仓库工具，**不入包**。仓库已设 `.gitattributes: * -text`，git 不做换行转换，避免「发布包 CRLF / tag blob LF」这类字节漂移。
+包内只放技能负载（`SKILL.md`、`README.md`、`LICENSE`、`.gitignore`、`assets/**`、`references/**`，共 26 个文件）；`.gitattributes` 与 `release/` 是仓库工具，**不入包**。仓库已设 `.gitattributes: * -text`，git 不做换行转换，避免「发布包 CRLF / tag blob LF」这类字节漂移。
 
 ### License
 

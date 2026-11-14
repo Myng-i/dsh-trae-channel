@@ -14,10 +14,11 @@ const USAGE = [
   "用法: node init-workspace.mjs [--root <dir>] [--force] [--quiet]",
   "",
   "在 <dir>（默认当前目录）搭起 DSH ⇄ TRAE 两条通道（先确认这是你想装的工作区）:",
-  "  tools/     15 个脚本（任务板 / 信箱 / 叫醒 / 自检）",
+  "  tools/     16 个脚本（任务板 / 信箱 / 叫醒 / 自检 / CDP 启动器）",
   "  bus/       任务板 state.json",
   "  mailbox/   信箱 + INDEX.md",
-  "  docs/      接入卡 + 邮政协议",
+  "  docs/      接入卡 + 邮政协议 + 启动器说明",
+  "  start-cdp.cmd / restart-cdp.cmd  双击入口（Windows；带 CDP 端口启动 DSH + TRAE）",
   "",
   "幂等：已存在的文件默认 skip；--force 覆盖工具与文档（不动 bus/ 与 mailbox/ 数据）。",
   "退出码：0 成功 / 2 参数错 / 6 目标任务板 state.json 损坏（拒绝重建）。",
@@ -57,7 +58,7 @@ const ensureDir = (rel) => {
   return p;
 };
 const copyIfMissing = (srcRel, dstRel) => {
-  const src = path.join(HERE, srcRel);
+  const src = path.isAbsolute(srcRel) ? srcRel : path.join(HERE, srcRel);
   const dst = path.join(ROOT, dstRel);
   if (fs.existsSync(dst) && !FORCE) { skipped++; log("  skip   " + dstRel); return; }
   fs.mkdirSync(path.dirname(dst), { recursive: true });
@@ -81,8 +82,22 @@ const TOOLS = ["bus-store.mjs", "bus-cli.mjs", "knock-ledger.mjs", "mailbox.mjs"
   "mcp-bus-server.mjs", "mcp-bus-client.mjs",
   "selftest.mjs", "mailbox-selftest.mjs", "init-workspace.mjs", "watchdog.mjs", "selfwake.mjs",
   "trae-inject.mjs", "wake-trae.mjs", "wake-dsh.mjs",
-  "nudge.mjs"];
+  "nudge.mjs", "launch-cdp.mjs"];
 for (const t of TOOLS) copyIfMissing(t, "tools/" + t);
+
+// 双击入口放工作区根（Windows）。源位置随布局变化：
+//   包布局 assets/init-workspace.mjs        → <skill>/assets/cmd/<name>
+//   已装布局 <ws>/tools/init-workspace.mjs  → <ws>/<name>（没有 cmd/ 子目录）
+for (const c of ["start-cdp.cmd", "restart-cdp.cmd"]) {
+  const src = [path.join(HERE, "cmd", c), path.join(HERE, "..", "assets", "cmd", c), path.join(HERE, "..", c)]
+    .find((x) => fs.existsSync(x));
+  if (!src) {
+    // 只影响双击入口，不该让整个安装失败（旧版在已装布局二次安装时 ENOENT 崩掉）
+    if (process.platform === "win32") console.warn("[init] 警告：找不到 " + c + "（可从包内 assets/cmd/ 取；通道脚本不受影响）");
+    continue;
+  }
+  copyIfMissing(src, c);
+}
 
 // 参考文档的来源随布局变化：
 //   package/assets/init-workspace.mjs → ../references/*.md
@@ -100,7 +115,7 @@ const findDoc = (name) => {
   }
   return null;
 };
-for (const name of ["邮政协议-v0.2.md", "TRAE侧-接入卡.md"]) {
+for (const name of ["邮政协议-v0.2.md", "TRAE侧-接入卡.md", "启动器-CDP-一键双开.md"]) {
   const dst = path.join(ROOT, "docs", name);
   if (fs.existsSync(dst) && !FORCE) { skipped++; log("  skip   docs/" + name); continue; }
   const src = findDoc(name);
@@ -148,9 +163,10 @@ log("[init] board: " + boardNote);
 
 log("[init] done: created=" + created + " copied=" + copied + " skipped=" + skipped);
 log("next:");
-log("  node tools/selftest.mjs              # 39/39");
+log("  node tools/selftest.mjs              # 40/40");
 log("  node tools/mailbox-selftest.mjs      # 12/12");
 log("  node tools/bus-cli.mjs board");
+log("  start-cdp.cmd                        # 带 CDP 端口启动 DSH + TRAE（Windows）");
 if (boardCode) {
   log("");
   log("[init] ⚠ 任务板未就绪（exit " + boardCode + "）。工具与文档已装好；修好 state.json 后重跑本命令，或用 --force 重建（会丢现有任务）。");

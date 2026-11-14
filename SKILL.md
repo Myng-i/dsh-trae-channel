@@ -6,7 +6,7 @@ whenToUse: 用户要和 TRAE（或另一个编码 agent/另一台机器）分工
 
 # DSH ⇄ TRAE 零成本协作双通道
 
-版本 v0.3.7（tag `v0.3.7`）｜负载 22 文件
+版本 v0.3.8（tag `v0.3.8`）｜负载 26 文件
 
 两条通道分工明确，**不要混用**：
 
@@ -26,7 +26,7 @@ node "<skill>/assets/init-workspace.mjs" --root "<目标工作区>"
 幂等，已存在即 skip（`--force` 才覆盖工具与文档，永不覆盖 `bus/`、`mailbox/` 里的数据）。`--help` 只打印用法、**不落盘**；未知参数或 `--root` 缺值一律 **exit 2**（v0.3.7 起；旧版 `--help` 会把当前目录当成 root 真装一遍）。安装器会顺带执行一次任务板 `init`（幂等，也可手动 `node tools/bus-cli.mjs init`）。**若 state.json 已损坏，安装器拒绝重建（exit 6）、原文件与备份都保留**，工具照装——数据优先，重建要显式 `init --force`。产出：
 
 ```text
-<工作区>/tools/   15 个 .mjs（store / cli / knock-ledger / mailbox / mcp server+client / 两个自检 / init / watchdog / selfwake / nudge / wake-trae / wake-dsh / trae-inject）
+<工作区>/tools/   16 个 .mjs（store / cli / knock-ledger / mailbox / mcp server+client / 两个自检 / init / watchdog / selfwake / nudge / wake-trae / wake-dsh / trae-inject / launch-cdp）+ 根目录 2 个 .cmd（start-cdp / restart-cdp）
 <工作区>/bus/     state.json + events.jsonl + state.lock（运行时生成）
 <工作区>/mailbox/ 信件 + INDEX.md + .cursor-<agent>
 <工作区>/docs/    协议 v0.2 + TRAE 侧接入卡
@@ -35,7 +35,7 @@ node "<skill>/assets/init-workspace.mjs" --root "<目标工作区>"
 装完先跑自检，**两个都满绿才算环境就绪**：
 
 ```bash
-node tools/selftest.mjs            # 39/39（含只读不落盘、损坏拒绝重建、MCP 三传输、自唤醒熔断、CDP 端口发现、安装器产出可运行、wake-trae、出站口唯一化、wake-dsh、--wake 取号与自派跳过、门铃账本损坏守卫）
+node tools/selftest.mjs            # 40/40（含只读不落盘、损坏拒绝重建、MCP 三传输、自唤醒熔断、CDP 端口发现、安装器产出可运行、wake-trae、出站口唯一化、wake-dsh、--wake 取号与自派跳过、门铃账本损坏守卫、launcher 参数守卫）
 node tools/mailbox-selftest.mjs    # 12/12（含并发 id 唯一、游标语义、空正文、Re: 去重、--wake 干跑、自发信不敲门）
 ```
 
@@ -191,6 +191,26 @@ node tools/selfwake.mjs notify off            # 只巡检、不叫醒 TRAE（TRA
 自动集成（推荐默认路径）：**出站统一用 `wake-trae`**——派完活跟一条 `node tools/wake-trae.mjs`，它把「指派给对方的 pending + 新信」合成一条【DSH 叫醒】注入；端口没开 exit 3、游标不动，**不改变文件状态**。`selfwake notify on`（默认）会让每次 tick 巡检成功后顺带跑它一次，所以「定时自唤醒 → 看门狗扫描 → wake-trae 叫醒」是一条链，且只有一个出站口。
 叫醒**不等于已读**：真凭据永远是 `mailbox/` 与 `bus/`，TRAE 仍要按接入卡跑 poll/inbox；同一批件只叫一次（游标推进后才重算）。
 
+### 前提：带 CDP 端口启动（`launch-cdp.mjs` 一键双开，Windows）
+
+端口只能在**启动时**给，事后补不了。`launch-cdp.mjs` 把「体检 → 需要时带端口启动 → 等端口+页面目标就绪 → 写 `cdp/state.json`」串成一步；工作区根目录的 `start-cdp.cmd` / `restart-cdp.cmd` 是双击入口（`init-workspace` 已装）。
+
+    start-cdp.cmd            # 没在跑就带端口启动（DSH 9223 / TRAE 9222）；已在跑且带 CDP 只体检
+    start-cdp.cmd --check    # 只体检，不启动（全就绪才 exit 0）
+    start-cdp.cmd --dry      # 只打印可执行文件、当前状态、将执行的命令
+    restart-cdp.cmd          # 在跑但没端口：确认后关掉重开（会中断 DSH 会话，聊天记录在磁盘）
+
+可执行文件按「`--dsh-exe`/`--trae-exe` → 环境变量 `DSH_EXE`/`TRAE_EXE` → **`cdp/launch.config.json`** → 运行进程路径 → 常见安装路径 → PATH」查找。机器相关路径写进配置（`cdp/` 默认 gitignore，不进包）：
+
+    { "dshExe": "D:/TOOL/deepseek-harness/DeepSeek Harness.exe",
+      "traeExe": "D:/software/Trae CN/Trae CN.exe" }
+
+三种状态：**ready**（只体检）/ **needs_restart**（在跑没端口，默认 exit 3 且**绝不杀进程**，`--restart` 才关）/ **not running**（带端口启动）。退出码：0 就绪 / 2 参数 / 3 在跑无端口或端口被占 / 4 找不到 exe / 5 启动后超时 / 6 探针失败 / 7 端口被别的程序占用。
+
+加固（都来自真实事故）：旧实例退出后 `waitPortFree(port, 8000)` 排空端口再 spawn（否则新实例 bind 失败被 Electron 静默忽略，表现为「命令行带了端口但 netstat 没有」）；带 `--user-data-dir` 时只杀命令行含该路径的进程；应用起来却没监听时自动重试一次。
+
+完整说明与实测证据见 `references/启动器-CDP-一键双开.md`。macOS/Linux 没有这个启动器，手动带 `--remote-debugging-port` 启动即可。
+
 ### 单入口规则（内容只走文件，CDP 只发引用 id）
 
 叫醒和投递是两条路，混用会漏件。2026-11-13 01:19 的真实事故：先用 `trae-inject send` 把问题正文直接注进聊天框，30 秒后才写信；TRAE 在我写信前就跑 `inbox --after`，查不到 → 它回「信箱里没有这封」。文件不丢，丢的是「只存在于注入文本里的内容」。
@@ -302,8 +322,8 @@ node tools/nudge.mjs --reset               # 清空 watch/nudge.json（不碰任
 安装后自检三条，任一不符就停手：
 
 ```bash
-ls <技能目录> | wc -l                 # 负载文件数（v0.3.5 / v0.3.6 / v0.3.7 = 22 文件，含 assets/ 15 个 .mjs，无 tools/）
-node tools/selftest.mjs               # 期望 ALL PASS 39/39，exit 0
+ls <技能目录> | wc -l                 # 负载文件数（v0.3.5 / v0.3.6 / v0.3.7 = 22；v0.3.8 = 26 文件，含 assets/ 16 个 .mjs + 2 个 .cmd，无 tools/）
+node tools/selftest.mjs               # 期望 ALL PASS 40/40，exit 0
 node tools/mailbox-selftest.mjs       # 期望 ALL PASS 12/12，exit 0
 ```
 
@@ -311,15 +331,16 @@ node tools/mailbox-selftest.mjs       # 期望 ALL PASS 12/12，exit 0
 
 | 顺序 | 包 | 说明 |
 |---|---|---|
-| 1 | `dsh-trae-channel-v0.3.7.zip` | 当前（`init-workspace --help` 不再落盘，未知参数 exit 2；README 补「两侧各装一份」） |
-| 2 | `dsh-trae-channel-v0.3.6.zip` | 上一版 |
-| 3 | `dsh-trae-channel-v0.3.5.zip` | （`wake-dsh` 去掉写死本机路径） |
-| 4 | `dsh-trae-channel-v0.3.4.zip` | 旧仓末版 |
-| 5 | `dsh-trae-channel-v0.3.3.zip` | |
-| 6 | `dsh-trae-channel-v0.3.2.zip` | |
-| 7 | `dsh-trae-channel-v0.3.1.zip` | 字节可复现版 |
-| 8 | `dsh-trae-channel-v0.3.0.zip` | 跨平台正斜杠重生版（98697 B），**不要**用 Release 里 96388 B 的旧 asset 在 macOS/Linux 回滚 |
-| 9 | `dsh-trae-channel-initial-a8f2a83.zip` | 初版（20 条目，`selftest` 27/28 为已知缺陷） |
+| 1 | `dsh-trae-channel-v0.3.8.zip` | 当前（新增 CDP 启动器 `launch-cdp.mjs` + `start-cdp.cmd`/`restart-cdp.cmd` + 启动器参考文档；可执行文件路径走 `cdp/launch.config.json`） |
+| 2 | `dsh-trae-channel-v0.3.7.zip` | `init-workspace --help` 不落盘、未知参数 exit 2；README 补「两侧各装一份」 |
+| 3 | `dsh-trae-channel-v0.3.6.zip` | |
+| 4 | `dsh-trae-channel-v0.3.5.zip` | `wake-dsh` 去掉写死本机路径 |
+| 5 | `dsh-trae-channel-v0.3.4.zip` | 旧仓末版 |
+| 6 | `dsh-trae-channel-v0.3.3.zip` | |
+| 7 | `dsh-trae-channel-v0.3.2.zip` | |
+| 8 | `dsh-trae-channel-v0.3.1.zip` | 字节可复现版 |
+| 9 | `dsh-trae-channel-v0.3.0.zip` | 跨平台正斜杠重生版（98697 B），**不要**用 Release 里 96388 B 的旧 asset 在 macOS/Linux 回滚 |
+| 10 | `dsh-trae-channel-initial-a8f2a83.zip` | 初版（20 条目，`selftest` 27/28 为已知缺陷） |
 
 - 装前核 `sha256sum <包>` 与发布记录；装后跑上面两条自检。
 - **渠道边界（公开）**：v0.3.5 起发布在新公开仓 `Myng-i/dsh-trae-channel`，Release 页面按 tag 取包。

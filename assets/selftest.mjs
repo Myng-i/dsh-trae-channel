@@ -348,9 +348,11 @@ const board2 = fs.existsSync(path.join(ins2, "bus", "state.json"));
 const gi2 = fs.existsSync(path.join(ins2, ".gitignore")) ? fs.readFileSync(path.join(ins2, ".gitignore"), "utf8") : "";
 const giTpl = [path.join(HERE, "..", ".gitignore"), path.join(HERE, ".gitignore")].find((x) => fs.existsSync(x));
 const giOk = [".tmp/", "node_modules/", "*.corrupt-*"].every((k) => gi2.includes(k)) && (!giTpl || fs.readFileSync(giTpl, "utf8") === gi2);
-ins2Run.code === 0 && docs2 === 2 && board2 && giOk
-  ? ok("已装布局二次安装", "tools/init-workspace.mjs → 第二个 root：exit 0、docs=2、板已 init、.gitignore 与包内模板逐字节相同")
-  : bad("已装布局二次安装", "exit=" + ins2Run.code + " docs=" + docs2 + " board=" + board2 + " gi=" + giOk + " tpl=" + (giTpl || "none") + " out=" + ins2Run.out.slice(-160));
+const refDir = [path.join(HERE, "references"), path.join(HERE, "..", "references")].find((d) => fs.existsSync(d));
+const docsExpect = refDir ? fs.readdirSync(refDir).filter((n) => n.endsWith(".md")).length : docs2;
+ins2Run.code === 0 && docs2 === docsExpect && board2 && giOk
+  ? ok("已装布局二次安装", "tools/init-workspace.mjs → 第二个 root：exit 0、docs=" + docsExpect + "（与 references 一致）、板已 init、.gitignore 与包内模板逐字节相同")
+  : bad("已装布局二次安装", "exit=" + ins2Run.code + " docs=" + docs2 + "/" + docsExpect + " board=" + board2 + " gi=" + giOk + " tpl=" + (giTpl || "none") + " out=" + ins2Run.out.slice(-160));
 
 // 20f. wake-trae 不自叫：from=self 的 to: all 广播不得被自己叫醒
 const echoRoot = path.join(TMPROOT, "echo-selftest");
@@ -513,6 +515,18 @@ knRun.code === 0 && knIds.includes("T-000009")
   : bad("nudge 注入后记门铃账本", JSON.stringify({ code: knRun.code, ids: knIds, err: knRun.err.slice(0, 80) }));
 try { fs.rmSync(kn, { recursive: true, force: true }); } catch {}
 
+// 21j) launch-cdp：--help exit 0、未知参数 exit 2、找不到可执行文件 exit 4，且失败路径不留 cdp/ 空状态
+const LCH = path.join(HERE, "launch-cdp.mjs");
+const cdpBefore = fs.existsSync(path.join(HERE, "cdp"));
+const lchHelp = await run(LCH, ["--help"]);
+const lchBad = await run(LCH, ["--bogus"]);
+const lchNoExe = await run(LCH, ["--only", "trae", "--trae-exe", "Z:/no/such/Trae.exe", "--check"]);
+const lchCdps = fs.existsSync(path.join(HERE, "cdp"));
+const lchOk = lchHelp.code === 0 && lchBad.code === 2 && lchNoExe.code === 4 && (cdpBefore || !lchCdps);
+lchOk
+  ? ok("launcher 守卫", "--help exit 0 不落盘；未知参数 exit 2；找不到 exe exit 4")
+  : bad("launcher 守卫", JSON.stringify({ help: lchHelp.code, bad: lchBad.code, noexe: lchNoExe.code, cdp: lchCdps }));
+
 srv.kill();
 setTimeout(() => {
   if (!process.argv.includes("--keep")) { try { fs.rmSync(BUS, { recursive: true, force: true }); } catch {} }
@@ -554,6 +568,7 @@ setTimeout(() => {
     "损坏 exit 6 + 备份 + 不覆盖 + 文案不谎称写入",
     "损坏时 init 拒绝重建 exit 6",
     "未初始化拒绝写入 exit 5",
+    "launcher 守卫",
     "缺验收标准只警告 exit 0",
     "note 缺 key 守卫",
   ];
