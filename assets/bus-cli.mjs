@@ -34,6 +34,29 @@ import { fileURLToPath } from "node:url";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 
+// --bus <dir>：调用方 cwd 不在任务板所在工作区时用（TRAE 被叫醒时常见）。
+// bus-store 的 BUS_DIR 是导入期常量，所以在解析参数前用 re-exec 把它注入子进程环境。
+{
+  const rest = process.argv.slice(2);
+  const bi = rest.indexOf("--bus");
+  if (bi >= 0) {
+    const raw = rest[bi + 1];
+    if (!raw || raw.startsWith("--")) { console.error("[bus] --bus 需要目录，例如 --bus <工作区>/bus"); process.exit(2); }
+    const target = path.resolve(raw);
+    const cur = process.env.BUS_DIR ? path.resolve(process.env.BUS_DIR) : "";
+    const strip = [...rest.slice(0, bi), ...rest.slice(bi + 2)];
+    if (cur.toLowerCase() !== target.toLowerCase()) {
+      // 环境里没有 BUS_DIR，或指向别处：re-exec 一次把目标注入（子进程 argv 里已没有 --bus）
+      const r = spawnSync(process.execPath, [fileURLToPath(import.meta.url), ...strip], {
+        stdio: "inherit", env: { ...process.env, BUS_DIR: target },
+      });
+      process.exit(r.status === null ? 1 : r.status);
+    }
+    // 环境已指向同一块板：只把 --bus 从 argv 里剔除，照常往下跑
+    process.argv = [process.argv[0], process.argv[1], ...strip];
+  }
+}
+
 // 敲门（CDP）：只发「引用任务号」的提醒，不承载需求正文。
 // --wake 让「建任务」与「叫人」同步完成，避免「先叫人、后建任务」导致对方当场查板为空。
 function knockTrae({ id, title, assignee, poster }) {
@@ -52,8 +75,11 @@ function knockTrae({ id, title, assignee, poster }) {
     console.error("[bus] " + id + " 已通知过，跳过重复敲门（要重发先删 watch/knock-notified.json）");
     return;
   }
+  // 绝对路径 + 可复制命令：收信方 cwd 可能不在本工作区，相对命令会读错板子。
+  const self = path.join(HERE, "bus-cli.mjs");
   const text = "【DSH 叫醒】新任务 " + id + "（" + (assignee || "未指派") + "）：" + String(title).slice(0, 60) +
-    "。请跑 bus-cli poll --as trae-ide --claim 领取；正文与验收标准在任务板上。";
+    "。任务板：\"" + BUS_DIR + "\"；领取：node \"" + self + "\" poll --as trae-ide --claim --bus \"" + BUS_DIR + "\"。" +
+    "请以此绝对路径为准，不要用你自己 cwd 下的 bus/；正文与验收标准在任务板上。";
   if (process.env.BUS_WAKE_DRY === "1") { console.log("[wake] would knock: " + text); return; }
   const inj = path.join(HERE, "trae-inject.mjs");
   if (!fs.existsSync(inj)) { console.error("[bus] 未找到 trae-inject.mjs，跳过敲门（任务已落盘）"); return; }

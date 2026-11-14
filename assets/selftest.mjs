@@ -389,6 +389,25 @@ wakeIdOk
   : bad("bus post --wake 引用任务 id", "code=" + wakePost.code + " out=" + wakePost.out.trim().slice(0, 160));
 try { fs.rmSync(wakeBusDir, { recursive: true, force: true }); } catch {}
 
+// 21c2) 跨工作区：从别的 cwd 建任务/发信，叫醒文案必须给绝对路径（--bus / --dir），否则对方读到自己 cwd 下的板
+const xRoot = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "xws-")), "wsA");
+const xOther = path.join(path.dirname(xRoot), "wsB");
+fs.mkdirSync(path.join(xRoot, "bus"), { recursive: true });
+fs.mkdirSync(path.join(xRoot, "mailbox"), { recursive: true });
+fs.mkdirSync(xOther, { recursive: true });
+fs.writeFileSync(path.join(xRoot, "bus", "state.json"), JSON.stringify({ tasks: [] }), "utf8");
+const xEnv = { ...env, BUS_DIR: path.join(xRoot, "bus"), BUS_WAKE_DRY: "1", MAILBOX_DIR: path.join(xRoot, "mailbox"), MAILBOX_WAKE_DRY: "1" };
+const runIn = (script, args) => new Promise((res) => execFile(process.execPath, [script, ...args], { env: xEnv, cwd: xOther, timeout: 20000 }, (e, so, se) => res({ code: e ? (e.code ?? 1) : 0, out: String(so || "") + String(se || "") })));
+const xBus = await runIn(CLI, ["post", "--title", "跨区任务", "--accept", "产出 docs/a.md", "--to", "trae-ide", "--wake", "--wake-force"]);
+const xMail = await runIn(MAIL, ["post", "--from", "dsh-lead", "--to", "trae-ide", "--subject", "跨区信", "--body", "跨工作区正文，够长以便通过长度校验。", "--wake", "--wake-force"]);
+const norm = (t) => t.replace(/\\/g, "/").toLowerCase();
+const busAbs = norm(xBus.out).includes(norm(path.join(xRoot, "bus"))) && /--bus/.test(xBus.out);
+const mailAbs = norm(xMail.out).includes(norm(path.join(xRoot, "mailbox"))) && /--dir/.test(xMail.out);
+xBus.code === 0 && xMail.code === 0 && busAbs && mailAbs
+  ? ok("跨工作区叫醒文案带绝对路径", "文案含 --bus/--dir 与目标绝对路径，与自身 cwd 无关")
+  : bad("跨工作区叫醒文案带绝对路径", "bus=" + xBus.code + "/" + busAbs + " mail=" + xMail.code + "/" + mailAbs + " out=" + xBus.out.trim().slice(0, 120));
+try { fs.rmSync(path.dirname(xRoot), { recursive: true, force: true }); } catch {}
+
 // 21d) bus-cli post --wake 派给自己的任务不敲门（TRAE 抓到的自叫醒）
 const selfBusDir = fs.mkdtempSync(path.join(os.tmpdir(), "bus-selfwake-"));
 const selfPost = await new Promise((res) => execFile(process.execPath, [CLI, "post", "--title", "自派", "--accept", "产出 docs/a.md", "--as", "trae-ide", "--to", "trae-ide", "--wake"],
@@ -543,6 +562,7 @@ setTimeout(() => {
     "MCP stdio",
     "assignee/to 兼容与冲突 exit 2",
     "bus post --wake 引用任务 id",
+    "跨工作区叫醒文案带绝对路径",
     "bus 自派任务不敲门",
     "bus knock 隔离与去重",
     "nudge 停滞催办",

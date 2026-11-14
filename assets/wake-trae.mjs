@@ -27,7 +27,12 @@ if (has("help") || has("h")) {
   process.exit(0);
 }
 
-const ROOT = path.resolve(String(opt("root", path.resolve(HERE, ".."))));
+// --root 优先；否则用脚本所在工作区；两者都不像工作区（没有 bus/ 也没有 mailbox/）时退回 cwd。
+// 退回的存在理由：从技能安装目录直接跑 <skills>/dsh-trae-channel/assets/wake-trae.mjs 时，HERE/.. 是技能目录。
+function looksLikeWorkspace(d) {
+  try { return fs.existsSync(path.join(d, "bus")) || fs.existsSync(path.join(d, "mailbox")); } catch { return false; }
+}
+const ROOT = path.resolve(String(opt("root", looksLikeWorkspace(path.resolve(HERE, "..")) ? path.resolve(HERE, "..") : process.cwd())));
 const AS = String(opt("as", "trae-ide"));
 const PORT = opt("port", "auto");
 const DRY = has("dry");
@@ -117,9 +122,16 @@ if (!items.length) { if (!QUIET) console.log("[wake] 无欠件（" + AS + " 没�
 
 const head = items.slice(0, 4).map((i) => "[" + i.kind + "] " + i.id + " " + i.subject).join("；");
 if (has("verbose") || DRY) for (const it of items) console.log("[wake] " + it.kind + " " + it.id + "  " + it.from + " → " + it.to + "  " + it.subject);
+// 命令一律给绝对路径：TRAE 的 cwd 往往不是本工作区，相对路径会让它读自己的 bus/ 或 mailbox/。
+const BUS_CLI = path.join(HERE, "bus-cli.mjs");
+const MBOX = path.join(HERE, "mailbox.mjs");
+const WAKE_DSH = path.join(HERE, "wake-dsh.mjs");
 const text = "【DSH 叫醒】新到 " + items.length + " 件：" + head + (items.length > 4 ? " 等" : "") +
-  "。工作区：" + ROOT + "（任务板 " + path.join(ROOT, "bus") + "）。请按 TRAE侧-接入卡 每轮两命令（poll --claim / inbox --advance）处理后回信。" +
-  "交付/回信后必须回唤 DSH：node tools/wake-dsh.mjs send --text-file <你写的摘要.txt>（CDP 9223；不叫醒 DSH 就不知道你完工）。";
+  "。工作区：\"" + ROOT + "\"。" +
+  "领取：node \"" + BUS_CLI + "\" poll --as trae-ide --claim --bus \"" + path.join(ROOT, "bus") + "\"；" +
+  "读信：node \"" + MBOX + "\" inbox --as trae-ide --advance --dir \"" + path.join(ROOT, "mailbox") + "\"。" +
+  "请以这些绝对路径为准，不要用你自己 cwd 下的 bus/ 或 mailbox/。" +
+  "交付/回信后必须回唤 DSH：node \"" + WAKE_DSH + "\" send --text-file <你写的摘要.txt>（CDP 9223；不叫醒 DSH 就不知道你完工）。";
 
 if (DRY) { console.log("[wake] --dry，将注入：\n" + text); process.exit(0); }
 

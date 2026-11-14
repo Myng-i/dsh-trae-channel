@@ -26,10 +26,6 @@ import { fileURLToPath } from "node:url";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 
-const ROOT = process.env.MAILBOX_DIR || path.join(process.cwd(), "mailbox");
-const INDEX = path.join(ROOT, "INDEX.md");
-fs.mkdirSync(ROOT, { recursive: true });
-
 const argv = process.argv.slice(2);
 const cmd = argv[0];
 const rest = argv.slice(1);
@@ -40,6 +36,14 @@ function opt(name, dflt) {
   if (v === undefined || v.startsWith("--")) return true;
   return v;
 }
+
+// 信箱目录：--dir 优先，其次 MAILBOX_DIR，最后 <cwd>/mailbox。
+// --dir 是给「调用方 cwd 不等于信件所在工作区」准备的（TRAE 被叫醒时在自己工作区，读不到别人的信箱）。
+const DIR_OPT = opt("dir");
+if (DIR_OPT === true) { console.error("[mailbox] --dir 需要目录，例如 --dir <工作区>/mailbox"); process.exit(2); }
+const ROOT = path.resolve(String(DIR_OPT || process.env.MAILBOX_DIR || path.join(process.cwd(), "mailbox")));
+const INDEX = path.join(ROOT, "INDEX.md");
+fs.mkdirSync(ROOT, { recursive: true });
 // 敲门（CDP）：只发「引用 id 的提醒」，不承载正文。正文永远在 mailbox/ 里。
 // --wake 把「落盘」与「敲门」合成一步，消除「先敲门、后投件」的时序竞态（TRAE 曾因此在 inbox 里查不到）。
 function knockTrae({ id, subject, to, from }) {
@@ -61,9 +65,11 @@ function knockTrae({ id, subject, to, from }) {
     console.error("[mailbox] " + id + " 已通知过，跳过重复敲门（要重发先删 watch/knock-notified.json）");
     return;
   }
-  const where = process.env.MAILBOX_DIR ? "，信箱 " + ROOT : "";
-  const text = "【DSH 叫醒】新信 " + id + "（" + to + where + "）：" + String(subject).slice(0, 60) +
-    "。请跑 mailbox inbox --as trae-ide --advance 读取后回复；正文只在文件里。";
+  // 绝对路径 + 可复制的命令：收信方可能不在这个工作区（cwd 不同），只给相对路径它会读自己的信箱。
+  const self = path.join(HERE, "mailbox.mjs");
+  const text = "【DSH 叫醒】新信 " + id + "（" + to + "）：" + String(subject).slice(0, 60) +
+    "。信箱目录：\"" + ROOT + "\"；读取：node \"" + self + "\" inbox --as trae-ide --advance --dir \"" + ROOT + "\"。" +
+    "请以此绝对路径为准，不要用你自己 cwd 下的 mailbox/；正文只在文件里。";
   if (process.env.MAILBOX_WAKE_DRY === "1") { console.log("[wake] would knock: " + text); return; }
   const inj = path.join(HERE, "trae-inject.mjs");
   if (!fs.existsSync(inj)) { console.error("[mailbox] 未找到 trae-inject.mjs，跳过敲门（信件已落盘，不影响投递）"); return; }
