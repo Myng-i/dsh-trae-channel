@@ -29,7 +29,7 @@ node "<skill>/assets/init-workspace.mjs" --root "<目标工作区>"
 <工作区>/tools/   16 个 .mjs（store / cli / knock-ledger / mailbox / mcp server+client / 两个自检 / init / watchdog / selfwake / nudge / wake-trae / wake-dsh / trae-inject / launch-cdp）+ 根目录 2 个 .cmd（start-cdp / restart-cdp）
 <工作区>/bus/     state.json + events.jsonl + state.lock（运行时生成）
 <工作区>/mailbox/ 信件 + INDEX.md + .cursor-<agent>
-<工作区>/docs/    协议 v0.2 + TRAE 侧接入卡
+<工作区>/docs/    协议 v0.2 + TRAE 侧接入卡 + CDP 启动器 + 实测证据（按 references/*.md 实读，当前 4 个）
 ```
 
 装完先跑自检，**两个都满绿才算环境就绪**：
