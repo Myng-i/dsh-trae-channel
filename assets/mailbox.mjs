@@ -46,7 +46,14 @@ const INDEX = path.join(ROOT, "INDEX.md");
 const SELF = path.join(HERE, "mailbox.mjs");
 // 读命令不建目录：cwd 不对时静默建出一个空信箱，「没信」就是假象（TRAE 复验抓过）。
 function ensureRootForWrite() {
-  if (!fs.existsSync(ROOT)) fs.mkdirSync(ROOT, { recursive: true });
+  if (!fs.existsSync(ROOT)) { fs.mkdirSync(ROOT, { recursive: true }); return; }
+  let st = null;
+  try { st = fs.statSync(ROOT); } catch {}
+  if (st && st.isDirectory()) return;
+  // 写命令遇到「路径是个文件」也必须干净 exit 5：否则 openSync 抛 ENOTDIR 带堆栈 exit 1（TRAE 2320 抓）
+  console.error("[mailbox] 信箱路径不是目录：" + ROOT);
+  console.error("[mailbox] 请换一个目录，或用 --dir \"<工作区>/mailbox\" 指到正确的信箱。");
+  process.exit(5);
 }
 function requireRoot(cmdName) {
   let st = null;

@@ -15,7 +15,7 @@ node assets/init-workspace.mjs --root /path/to/workspace     # 幂等，已存�
 cd /path/to/workspace
 node tools/watchdog.mjs --init && node tools/watchdog.mjs --once --toast   # 可选：只读看门狗
 node tools/selfwake.mjs status                                                  # 可选：自唤醒（默认 OFF，需用户要求才 enable）
-node tools/selftest.mjs && node tools/mailbox-selftest.mjs    # 41/41 与 14/14 全绿才算就绪
+node tools/selftest.mjs && node tools/mailbox-selftest.mjs    # 41/41 与 15/15 全绿才算就绪
 node tools/wake-trae.mjs --init                               # 可选：建出站叫醒基线（派活后主动叫醒 TRAE）
 node tools/wake-dsh.mjs status                                # 可选：反向叫醒检查（需 DSH 带 --remote-debugging-port=9223 启动）
 start-cdp.cmd                                                 # 可选：Windows 一键带 CDP 端口启动 DSH + TRAE（restart-cdp.cmd 重启）
@@ -34,7 +34,7 @@ DSH 和 TRAE 各自跑各自的命令，所以**两边都装一份**：
 
 `bus/` 与 `mailbox/` 是**同一份共享数据**（都在协作工作区里），但 `tools/` 下那些脚本每侧要自备一份：只装一侧时另一侧没有可执行的脚本，双通道就退化成「手动读文件」，轮询、领活、叫醒全都跑不起来。
 
-装完各自验一遍：两边分别跑 `node tools/selftest.mjs`（41/41）与 `node tools/mailbox-selftest.mjs`（14/14），都 exit 0 才算两侧就绪。
+装完各自验一遍：两边分别跑 `node tools/selftest.mjs`（41/41）与 `node tools/mailbox-selftest.mjs`（15/15），都 exit 0 才算两侧就绪。
 
 ## 两条通道
 

@@ -168,7 +168,7 @@ log("[init] board: " + boardNote);
 log("[init] done: created=" + created + " copied=" + copied + " skipped=" + skipped);
 log("next:");
 log("  node tools/selftest.mjs              # 41/41");
-log("  node tools/mailbox-selftest.mjs      # 14/14");
+log("  node tools/mailbox-selftest.mjs      # 15/15");
 log("  node tools/bus-cli.mjs board");
 log("  start-cdp.cmd                        # 带 CDP 端口启动 DSH + TRAE（Windows）");
 if (boardCode) {

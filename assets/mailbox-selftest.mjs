@@ -2,11 +2,11 @@
 /**
  * mailbox-selftest.mjs — 信箱自检（临时 MAILBOX_DIR，不碰正式信箱）
  *
- *   node tools/mailbox-selftest.mjs            # 14 项，全 PASS 即协议可用
+ *   node tools/mailbox-selftest.mjs            # 15 项，全 PASS 即协议可用
  *   node tools/mailbox-selftest.mjs --keep     # 保留临时目录看现场
  *
  * 覆盖协议 v0.2 的硬保证：正文不可为空 / id 并发唯一（wx 独占创建）/ 游标推进 / --after 增量 /
- * 读命令信箱不存在时不建目录（exit 5）。
+ * 读命令信箱不存在时不建目录（exit 5）/ 信箱路径是文件时读与写都干净 exit 5。
  * 退出码：0 全通过，1 有失败。
  */
 import { execFile } from "node:child_process";
@@ -185,6 +185,22 @@ hp.code === 0 && !madeByHelp && wr.code === 0 && fs.existsSync(noBox)
   ? ok("--help 不建目录 / post 建目录", "读不落盘，写才落盘")
   : bad("--help 不建目录 / post 建目录", "help=" + hp.code + " helpMade=" + madeByHelp + " post=" + wr.code + " postMade=" + fs.existsSync(noBox));
 try { fs.rmSync(d8, { recursive: true, force: true }); } catch {}
+
+// 15. 写命令遇到「信箱路径是个文件」：必须干净 exit 5，不能抛 ENOTDIR 带堆栈 exit 1（TRAE 2320 抓）
+const d9 = fs.mkdtempSync(path.join(os.tmpdir(), "mailbox-notdir-"));
+const asFile = path.join(d9, "mailbox");
+fs.writeFileSync(asFile, "not a directory", "utf8");
+const run9 = (args) => new Promise((resolve) => {
+  execFile(process.execPath, [MB, ...args, "--dir", asFile], { env, timeout: 20000 },
+    (e, so, se) => resolve({ code: e ? (e.code ?? 1) : 0, out: String(so || ""), err: String(se || "") }));
+});
+const wr1 = await run9(["post", "--from", "dsh-lead", "--to", "trae-ide", "--subject", "文件挡路", "--body", "写命令撞到同名文件时必须干净失败，正文长度足够通过校验"]);
+const rd5 = await run9(["inbox", "--as", "trae-ide"]);
+const noStack = !/\n\s+at |Error:\s/.test(wr1.err) && !/\n\s+at |Error:\s/.test(rd5.err);
+wr1.code === 5 && rd5.code === 5 && /不是目录/.test(wr1.err) && /不是目录/.test(rd5.err) && noStack && fs.statSync(asFile).isFile()
+  ? ok("信箱路径是文件时写/读都 exit 5", "无堆栈、原文件未被破坏")
+  : bad("信箱路径是文件时写/读都 exit 5", "write=" + wr1.code + " read=" + rd5.code + " stack=" + !noStack + " tail=" + wr1.err.trim().slice(-60));
+try { fs.rmSync(d9, { recursive: true, force: true }); } catch {}
 
 setTimeout(() => {
   if (!process.argv.includes("--keep")) { try { fs.rmSync(DIR, { recursive: true, force: true }); fs.rmSync(d2, { recursive: true, force: true }); fs.rmSync(d3, { recursive: true, force: true }); fs.rmSync(d4, { recursive: true, force: true }); fs.rmSync(d5, { recursive: true, force: true }); fs.rmSync(d6, { recursive: true, force: true }); } catch {} }

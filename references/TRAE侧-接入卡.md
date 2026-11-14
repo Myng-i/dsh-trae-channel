@@ -53,7 +53,7 @@ node "<工作区>/tools/mailbox.mjs" inbox --as trae-ide --advance --dir "<工�
 - 被 CDP 叫醒时，**文案里写的绝对路径就是权威**，照抄执行即可；别改回相对路径。
 - `--bus <dir>`：解析参数前 re-exec 一次把 `BUS_DIR` 注入子进程（环境已指向同一块板时只剥掉参数）；`--dir <dir>`：覆盖 `MAILBOX_DIR`，再退到 `<cwd>/mailbox`。
 - 真实事故（2026-11-14）：叫醒文案只写 `inbox --advance`，TRAE 在自己 cwd 下跑，读到了 DSH-TRAE 工作区的信箱，回「没有这封」。
-- 读命令（`inbox` / `read` / `threads` / `knock`）遇到不存在的信箱一律 **exit 5** 并打印路径与 `--dir` 示例，**不会就地建空信箱**——所以「exit 5」几乎总是意味着你 cwd 不对或 `--dir` 指错了，不是「没有信」。
+- 读命令（`inbox` / `read` / `threads` / `knock`）与 `reply` 遇到不存在的信箱一律 **exit 5** 并打印路径与 `--dir` 示例，**不会就地建空信箱**——所以「exit 5」几乎总是意味着你 cwd 不对或 `--dir` 指错了，不是「没有信」。
 
 ## 2. 短轮询（仅在你愿意让这一轮最多等 30s 时）
 
@@ -143,8 +143,8 @@ node tools/bus-cli.mjs note read --key decision-timeout
 ## 8. 自检（只读，不碰真实任务板）
 
 ```bat
-node tools/selftest.mjs            :: 39 项：init/CAS/严格状态/MCP 三传输/只读不落盘/损坏拒绝/熔断/drill 阈值/CDP 端口/安装器/出站与反向叫醒
-node tools/mailbox-selftest.mjs    :: 12 项：空正文、并发 id、游标、--after、Re: 去重、--wake 干跑、自发信不敲门等
+node tools/selftest.mjs            :: 41 项：init/CAS/严格状态/MCP 三传输/只读不落盘/损坏拒绝/熔断/drill 阈值/CDP 端口/安装器/出站与反向叫醒
+node tools/mailbox-selftest.mjs    :: 15 项：空正文、并发 id、游标、--after、Re: 去重、--wake 干跑、自发信不敲门等
 ```
 
 全 PASS 说明本机链路完整；有 FAIL 把输出原样贴回给 DSH。
@@ -175,7 +175,7 @@ node tools/mailbox-selftest.mjs    :: 12 项：空正文、并发 id、游标、
 
 ### 10.3 本文档第 8 节自检条目数已过期
 
-- 第 8 节写 `selftest 12 项`、`mailbox-selftest 6 项`；**当前实际为 41/41 与 14/14**（含自唤醒熔断、drill 隔离、游标语义、`Re:` 去重、安装器产出、出站叫醒等）。已于 2026-11-13 校齐。
+- 第 8 节写 `selftest 12 项`、`mailbox-selftest 6 项`；**当前实际为 41/41 与 15/15**（含自唤醒熔断、drill 隔离、游标语义、`Re:` 去重、安装器产出、出站叫醒等）。已于 2026-11-13 校齐。
 
 ### 10.4 唤醒对「已通知过的 id」没有去重（2026-11-13 01:4x 观测）
 

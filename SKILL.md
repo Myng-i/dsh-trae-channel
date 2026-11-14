@@ -36,7 +36,7 @@ node "<skill>/assets/init-workspace.mjs" --root "<目标工作区>"
 
 ```bash
 node tools/selftest.mjs            # 41/41（含只读不落盘、损坏拒绝重建、MCP 三传输、自唤醒熔断、CDP 端口发现、安装器产出可运行、wake-trae、出站口唯一化、wake-dsh、--wake 取号与自派跳过、门铃账本损坏守卫、launcher 参数守卫、跨工作区绝对路径）
-node tools/mailbox-selftest.mjs    # 14/14（含并发 id 唯一、游标语义、空正文、Re: 去重、--wake 干跑、自发信不敲门、读命令不建信箱）
+node tools/mailbox-selftest.mjs    # 15/15（含并发 id 唯一、游标语义、空正文、Re: 去重、--wake 干跑、自发信不敲门、读命令不建信箱、路径是文件时不抛堆栈）
 ```
 
 Windows 上 node 不在 PATH 时用绝对路径，例如
@@ -64,7 +64,7 @@ node "<工作区>/tools/mailbox.mjs" inbox --as <身份> --advance --dir "<工�
 - 被 CDP 叫醒时，**叫醒文案里的绝对路径就是权威**：照抄执行，别改回自己 cwd 下的 `bus/`、`mailbox/`。
 - `--bus <dir>` 在解析参数前 re-exec 一次，把 `BUS_DIR` 注入子进程（环境已指向同一块板时只把参数剥掉）；`--dir <dir>` 覆盖 `MAILBOX_DIR`，再退到 `<cwd>/mailbox`。
 - 真实事故（2026-11-14）：叫醒文案只写 `mailbox inbox --as trae-ide --advance`，TRAE 在自己 cwd 下跑，读到了 DSH-TRAE 工作区的信箱，回「信箱里没有这封」。
-- **读命令不再造目录**：`inbox` / `read` / `threads` / `knock` 发现信箱不存在时打三条提示并 `exit 5`（路径、`--dir` 绝对路径示例、「不替你建空信箱」），不会就地建出一个空信箱把「cwd 错了」伪装成「没有信」。写命令（`post` / `reply` / `index`）才会建目录，`--help` 不落盘。
+- **读命令不再造目录**：`inbox` / `read` / `threads` / `knock` 发现信箱不存在时打三条提示并 `exit 5`（路径、`--dir` 绝对路径示例、「不替你建空信箱」），不会就地建出一个空信箱把「cwd 错了」伪装成「没有信」。`post` / `index` 才会建目录，`--help` 不落盘；`reply` 要先读原信，信箱不存在同样 `exit 5`。任何命令遇到「信箱路径是个文件」都干净 `exit 5`，不抛堆栈。
 
 ## 三、派活（任务板）
 
@@ -338,15 +338,15 @@ node tools/nudge.mjs --reset               # 清空 watch/nudge.json（不碰任
 ```bash
 ls <技能目录> | wc -l                 # 负载文件数（v0.3.5 / v0.3.6 / v0.3.7 = 22；v0.3.8–v0.3.12 = 26 文件，含 assets/ 16 个 .mjs + 2 个 .cmd，无 tools/）
 node tools/selftest.mjs               # 期望 ALL PASS 41/41，exit 0
-node tools/mailbox-selftest.mjs       # 期望 ALL PASS 14/14，exit 0
+node tools/mailbox-selftest.mjs       # 期望 ALL PASS 15/15，exit 0
 ```
 
 **回滚顺序**（按版本号取包，别用不带版本号的通用名）：
 
 | 顺序 | 包 | 说明 |
 |---|---|---|
-| 1 | `dsh-trae-channel-v0.3.12.zip` | 当前（`mailbox` 读命令遇到不存在的信箱改为 `exit 5` 并给绝对路径提示，不再静默建空信箱；`wake-trae` 叫醒文案的绝对路径提醒加粗并写明后果；`mailbox-selftest` 12 → 14 项） |
-| 2 | `dsh-trae-channel-v0.3.11.zip` | 当前（`trae-inject send` 关闭 socket 后显式 `exit 0`，修「已送达却报未送达」；`wake-trae` 叫醒文案带「交付后必须回唤 DSH」契约；叫醒文案与 `mailbox`/`bus-cli` 全面改用绝对路径 `--dir`/`--bus`，修「执行端读到自己 cwd 下的另一份信箱/任务板」；接入卡 §11.4 由待定改为已启用） |
+| 1 | `dsh-trae-channel-v0.3.12.zip` | 当前（`mailbox` 读命令遇到不存在的信箱改为 `exit 5` 并给绝对路径提示，不再静默建空信箱；路径是文件时读/写都干净 `exit 5`；`wake-trae` 叫醒文案的绝对路径提醒加粗并写明后果；`mailbox-selftest` 12 → 15 项） |
+| 2 | `dsh-trae-channel-v0.3.11.zip` | `trae-inject send` 关闭 socket 后显式 `exit 0`，修「已送达却报未送达」；`wake-trae` 叫醒文案带「交付后必须回唤 DSH」契约；叫醒文案与 `mailbox`/`bus-cli` 全面改用绝对路径 `--dir`/`--bus`，修「执行端读到自己 cwd 下的另一份信箱/任务板」；接入卡 §11.4 由待定改为已启用） |
 | 3 | `dsh-trae-channel-v0.3.10.zip` | `SKILL.md` §一 安装布局的 `docs/` 说明补全为 4 个参考文档；纯文档修正 |
 | 4 | `dsh-trae-channel-v0.3.9.zip` | `init` 的文档清单改为按来源目录 `references/*.md` 实读，修掉包布局自检 39/40；`launch.config.json` 示例路径通用化 |
 | 5 | `dsh-trae-channel-v0.3.8.zip` | 新增 CDP 启动器 `launch-cdp.mjs` + `start-cdp.cmd`/`restart-cdp.cmd` + 启动器参考文档；可执行文件路径走 `cdp/launch.config.json` |
