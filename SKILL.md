@@ -6,7 +6,7 @@ whenToUse: 用户要和 TRAE（或另一个编码 agent/另一台机器）分工
 
 # DSH ⇄ TRAE 零成本协作双通道
 
-版本 v0.3.10（tag `v0.3.10`）｜负载 26 文件
+版本 v0.3.11（tag `v0.3.11`）｜负载 26 文件
 
 两条通道分工明确，**不要混用**：
 
@@ -255,7 +255,7 @@ node tools/selfwake.mjs notify off            # 只巡检、不叫醒 TRAE（TRA
 
 `trae-inject` 是「我叫醒 TRAE」；`wake-dsh` 是反方向——TRAE 在它那一轮里跑一条命令，把一句话送进 DSH 的聊天框并回车，同样走 CDP、不抢鼠标。
 
-**回信是回信，唤醒是唤醒**：`mailbox post` / `bus-cli done` 只落盘，不会叫醒对方。对端收尾必须再跑一次本节的 `send`，且只发「id + 一行标题」，正文留在文件里；`status` 不是 READY 就写明「未唤醒，请用户转达」。
+**回信是回信，唤醒是唤醒**：`wake-trae` 注入的叫醒文案里已带这条契约（「交付/回信后必须回唤 DSH」），收到叫醒的对端照做即可。`mailbox post` / `bus-cli done` 只落盘，不会叫醒对方。对端收尾必须再跑一次本节的 `send`，且只发「id + 一行标题」，正文留在文件里；`status` 不是 READY 就写明「未唤醒，请用户转达」。
 
 **敲门 ≠ 对方已读**：唤醒只是提醒，凭据仍是任务 `done` 状态与邮箱/仓库里的文件。
 
@@ -322,7 +322,7 @@ node tools/nudge.mjs --reset               # 清空 watch/nudge.json（不碰任
 安装后自检三条，任一不符就停手：
 
 ```bash
-ls <技能目录> | wc -l                 # 负载文件数（v0.3.5 / v0.3.6 / v0.3.7 = 22；v0.3.8 / v0.3.9 / v0.3.10 = 26 文件，含 assets/ 16 个 .mjs + 2 个 .cmd，无 tools/）
+ls <技能目录> | wc -l                 # 负载文件数（v0.3.5 / v0.3.6 / v0.3.7 = 22；v0.3.8 / v0.3.9 / v0.3.10 / v0.3.11 = 26 文件，含 assets/ 16 个 .mjs + 2 个 .cmd，无 tools/）
 node tools/selftest.mjs               # 期望 ALL PASS 40/40，exit 0
 node tools/mailbox-selftest.mjs       # 期望 ALL PASS 12/12，exit 0
 ```
@@ -331,18 +331,19 @@ node tools/mailbox-selftest.mjs       # 期望 ALL PASS 12/12，exit 0
 
 | 顺序 | 包 | 说明 |
 |---|---|---|
-| 1 | `dsh-trae-channel-v0.3.10.zip` | 当前（`SKILL.md` §一 安装布局的 `docs/` 说明补全为 4 个参考文档；纯文档修正） |
-| 2 | `dsh-trae-channel-v0.3.9.zip` | `init` 的文档清单改为按来源目录 `references/*.md` 实读，修掉包布局自检 39/40；`launch.config.json` 示例路径通用化 |
-| 3 | `dsh-trae-channel-v0.3.8.zip` | 新增 CDP 启动器 `launch-cdp.mjs` + `start-cdp.cmd`/`restart-cdp.cmd` + 启动器参考文档；可执行文件路径走 `cdp/launch.config.json` |
-| 4 | `dsh-trae-channel-v0.3.7.zip` | `init-workspace --help` 不落盘、未知参数 exit 2；README 补「两侧各装一份」 |
-| 5 | `dsh-trae-channel-v0.3.6.zip` | |
-| 6 | `dsh-trae-channel-v0.3.5.zip` | `wake-dsh` 的默认路径可配置 |
-| 7 | `dsh-trae-channel-v0.3.4.zip` | 历史版本 |
-| 8 | `dsh-trae-channel-v0.3.3.zip` | |
-| 9 | `dsh-trae-channel-v0.3.2.zip` | |
-| 10 | `dsh-trae-channel-v0.3.1.zip` | 字节可复现版 |
-| 11 | `dsh-trae-channel-v0.3.0.zip` | 跨平台正斜杠重生版（98697 B），**不要**用 Release 里 96388 B 的旧 asset 在 macOS/Linux 回滚 |
-| 12 | `dsh-trae-channel-initial-a8f2a83.zip` | 初版（20 条目，`selftest` 27/28 为已知缺陷） |
+| 1 | `dsh-trae-channel-v0.3.11.zip` | 当前（`trae-inject send` 关闭 socket 后显式 `exit 0`，修「已送达却报未送达」；`wake-trae` 叫醒文案带「交付后必须回唤 DSH」契约；接入卡 §11.4 由待定改为已启用） |
+| 2 | `dsh-trae-channel-v0.3.10.zip` | `SKILL.md` §一 安装布局的 `docs/` 说明补全为 4 个参考文档；纯文档修正 |
+| 3 | `dsh-trae-channel-v0.3.9.zip` | `init` 的文档清单改为按来源目录 `references/*.md` 实读，修掉包布局自检 39/40；`launch.config.json` 示例路径通用化 |
+| 4 | `dsh-trae-channel-v0.3.8.zip` | 新增 CDP 启动器 `launch-cdp.mjs` + `start-cdp.cmd`/`restart-cdp.cmd` + 启动器参考文档；可执行文件路径走 `cdp/launch.config.json` |
+| 5 | `dsh-trae-channel-v0.3.7.zip` | `init-workspace --help` 不落盘、未知参数 exit 2；README 补「两侧各装一份」 |
+| 6 | `dsh-trae-channel-v0.3.6.zip` | |
+| 7 | `dsh-trae-channel-v0.3.5.zip` | `wake-dsh` 的默认路径可配置 |
+| 8 | `dsh-trae-channel-v0.3.4.zip` | 历史版本 |
+| 9 | `dsh-trae-channel-v0.3.3.zip` | |
+| 10 | `dsh-trae-channel-v0.3.2.zip` | |
+| 11 | `dsh-trae-channel-v0.3.1.zip` | 字节可复现版 |
+| 12 | `dsh-trae-channel-v0.3.0.zip` | 跨平台正斜杠重生版（98697 B），**不要**用 Release 里 96388 B 的旧 asset 在 macOS/Linux 回滚 |
+| 13 | `dsh-trae-channel-initial-a8f2a83.zip` | 初版（20 条目，`selftest` 27/28 为已知缺陷） |
 
 - 装前核 `sha256sum <包>` 与发布记录；装后跑上面两条自检。
 - **渠道边界（公开）**：v0.3.5 起发布在新公开仓 `Myng-i/dsh-trae-channel`，Release 页面按 tag 取包。

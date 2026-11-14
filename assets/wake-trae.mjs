@@ -118,7 +118,8 @@ if (!items.length) { if (!QUIET) console.log("[wake] 无欠件（" + AS + " 没�
 const head = items.slice(0, 4).map((i) => "[" + i.kind + "] " + i.id + " " + i.subject).join("；");
 if (has("verbose") || DRY) for (const it of items) console.log("[wake] " + it.kind + " " + it.id + "  " + it.from + " → " + it.to + "  " + it.subject);
 const text = "【DSH 叫醒】新到 " + items.length + " 件：" + head + (items.length > 4 ? " 等" : "") +
-  "。请按 TRAE侧-接入卡 每轮两命令（poll --claim / inbox --advance）处理后回信。";
+  "。工作区：" + ROOT + "（任务板 " + path.join(ROOT, "bus") + "）。请按 TRAE侧-接入卡 每轮两命令（poll --claim / inbox --advance）处理后回信。" +
+  "交付/回信后必须回唤 DSH：node tools/wake-dsh.mjs send --text-file <你写的摘要.txt>（CDP 9223；不叫醒 DSH 就不知道你完工）。";
 
 if (DRY) { console.log("[wake] --dry，将注入：\n" + text); process.exit(0); }
 

@@ -204,10 +204,19 @@ node tools/mailbox-selftest.mjs    :: 12 项：空正文、并发 id、游标、
 - 只适合临时验证；用完**重启 DSH 且不带该参数**即关闭端口。
 - 操作提醒：PowerShell 里路径带空格/引号时必须用调用运算符 `&`，例如 `& "<DSH 可执行文件路径>\DeepSeek Harness.exe" --remote-debugging-port=9223`（`wake-dsh.mjs status` 探测不到时也只打印占位符，不会打印你机器上的真实路径），否则会报 ParserError。
 
-### 11.4 待定：每轮末尾调一次 wake-dsh
+### 11.4 已启用（2026-11-14 拍板）：每轮末尾必须调一次 wake-dsh
 
-- 建议在每轮末尾追加一条 `wake-dsh send`，让 DSH 尽快看到我的回信。
-- **暂不采纳**：端口默认不开，调了只会 exit 3；且会让我每轮多一条命令（约 330ms）。等 9223 常态化或提供非端口方案后再议，需用户拍板。
+- 背景：DSH 是「用户发话才有 turn」的形态，bus/mailbox 只是文件，TRAE 发 done 后 DSH 不会自动醒来。用户 2026-11-14 22:20 指出这是缺口（m00442）。
+- 现状：DSH 桌面端当前**已带** `--remote-debugging-port=9223` 启动（`wake-dsh status` → `READY cdp=9223ok`，exit 0）。
+- **硬要求**：TRAE 每轮交付（`bus-cli done` 或 `mailbox reply`）之后、结束本轮之前，必须执行一条：
+
+  ```
+  node tools/wake-dsh.mjs send --text-file <临时文件>
+  ```
+
+  临时文件内容一行即可，例如：`【TRAE 回信】T-000002 DONE：三条全关闭，0 新问题。`（用 `--text-file` 而不是 `--text`，中文/长文本更稳）
+- 判据：exit 0 + 打印「已注入 N 字符并回车」才算唤醒成功；exit 3 = 9223 没开，须在回信里写明「未唤醒 DSH（端口不通）」，不许假装叫过。
+- 不这么做，DSH 侧只能等用户手动转发——这正是上一轮的卡点。
 
 ## 12. 硬规则：动本机技能目录必须用户逐次确认
 

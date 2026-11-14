@@ -88,7 +88,7 @@ DSH 和 TRAE 各自跑各自的命令，所以**两边都装一份**：
 
 ```bash
 # 从 tag 重建（推荐：取 git blob，不受工作树换行影响）
-node release/build-zip.mjs --ref v0.3.9 --out ../dist/dsh-trae-channel-v0.3.9.zip
+node release/build-zip.mjs --ref v0.3.11 --out ../dist/dsh-trae-channel-v0.3.11.zip
 # 从当前工作树构建（开发自查）
 node release/build-zip.mjs --worktree --out ../dist/dev.zip
 ```

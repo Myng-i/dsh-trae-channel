@@ -288,6 +288,9 @@ async function main() {
   if (args.json) console.log(JSON.stringify({ ok: true, target: row.title, focused: info, chars: text.length, entered: !args.noEnter }));
   else console.log("[inject] 已投递 " + text.length + " 字符到「" + (row.title || row.url) + "」" + (args.noEnter ? "（未回车）" : " 并回车"));
   p.close();
+  // 本机补丁 2026-11-14：socket 关闭后事件循环仍被残留定时器挂住，进程不退出，
+  // 导致 wake-trae 的 spawnSync 30s 超时杀进程（status=null）并误报「未送达」。
+  process.exit(0);
 }
 
 main().catch((e) => { console.error("[inject] 失败：" + e.message); process.exit(5); });
