@@ -180,7 +180,8 @@ async function main() {
   } catch (e) {
     console.error("[inject] 连不上 127.0.0.1:" + args.port + " — " + e.message);
     console.error("[inject] TRAE 当前没有开 CDP。需要一次性重启（之后照常用）：");
-    console.error('  & "D:\\software\\Trae CN\\Trae CN.exe" --remote-debugging-port=9222');
+    console.error('  最省事：node tools/launch-cdp.mjs --only trae --restart');
+    console.error('  或手动："<你的 Trae CN 安装路径>\\Trae CN.exe" --remote-debugging-port=9222');
     console.error("[inject] 或先退出 TRAE，再从带该参数的快捷方式启动。");
     process.exit(3);
   }

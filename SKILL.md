@@ -6,7 +6,7 @@ whenToUse: 用户要和 TRAE（或另一个编码 agent/另一台机器）分工
 
 # DSH ⇄ TRAE 零成本协作双通道
 
-版本 v0.3.12（tag `v0.3.12`）｜负载 26 文件
+版本 v0.3.13（tag `v0.3.13`）｜负载 26 文件
 
 两条通道分工明确，**不要混用**：
 
@@ -223,7 +223,9 @@ node tools/selfwake.mjs notify off            # 只巡检、不叫醒 TRAE（TRA
 
 加固（都来自真实事故）：旧实例退出后 `waitPortFree(port, 8000)` 排空端口再 spawn（否则新实例 bind 失败被 Electron 静默忽略，表现为「命令行带了端口但 netstat 没有」）；带 `--user-data-dir` 时只杀命令行含该路径的进程；应用起来却没监听时自动重试一次。
 
-完整说明与实测证据见 `references/启动器-CDP-一键双开.md`。macOS/Linux 没有这个启动器，手动带 `--remote-debugging-port` 启动即可。
+从工作区以外的地方（桌面快捷方式、别的 cwd）运行时，`.cmd` 会自己找工作区：`%DSH_TRAE_ROOT%` → 本文件所在目录 → 上两级 → `%CD%` 及 5 级祖先，判据是存在 `tools\launch-cdp.mjs`；找不到就打印指引并 **exit 8**。放桌面推荐用一个只做转发的包装器（`set "DSH_TRAE_ROOT=<工作区绝对路径>"` 后 `call` 工作区那份 cmd），不要直接拷工作区那份——拷过去后 `%~dp0` 变成桌面，模块路径就断了。启动器本身也认 `--root <工作区>` 与 `DSH_TRAE_ROOT`。
+
+不想带两个文件时用**单文件版**：`release/build-singlefile.mjs` 会把启动器 base64 嵌进一个 `.cmd`，双击即用（JS 解到 `%LOCALAPPDATA%\dsh-trae-cdp\`，不需要工作区；`--dsh-exe`/`--trae-exe` 可把本机路径烘进去）。完整说明与实测证据见 `references/启动器-CDP-一键双开.md`。macOS/Linux 没有这个启动器，手动带 `--remote-debugging-port` 启动即可。
 
 ### 单入口规则（内容只走文件，CDP 只发引用 id）
 
@@ -345,20 +347,21 @@ node tools/mailbox-selftest.mjs       # 期望 ALL PASS 15/15，exit 0
 
 | 顺序 | 包 | 说明 |
 |---|---|---|
-| 1 | `dsh-trae-channel-v0.3.12.zip` | 当前（`mailbox` 读命令遇到不存在的信箱改为 `exit 5` 并给绝对路径提示，不再静默建空信箱；路径是文件时读/写都干净 `exit 5`；`wake-trae` 叫醒文案的绝对路径提醒加粗并写明后果；`mailbox-selftest` 12 → 15 项） |
-| 2 | `dsh-trae-channel-v0.3.11.zip` | `trae-inject send` 关闭 socket 后显式 `exit 0`，修「已送达却报未送达」；`wake-trae` 叫醒文案带「交付后必须回唤 DSH」契约；叫醒文案与 `mailbox`/`bus-cli` 全面改用绝对路径 `--dir`/`--bus`，修「执行端读到自己 cwd 下的另一份信箱/任务板」；接入卡 §11.4 由待定改为已启用） |
-| 3 | `dsh-trae-channel-v0.3.10.zip` | `SKILL.md` §一 安装布局的 `docs/` 说明补全为 4 个参考文档；纯文档修正 |
-| 4 | `dsh-trae-channel-v0.3.9.zip` | `init` 的文档清单改为按来源目录 `references/*.md` 实读，修掉包布局自检 39/40；`launch.config.json` 示例路径通用化 |
-| 5 | `dsh-trae-channel-v0.3.8.zip` | 新增 CDP 启动器 `launch-cdp.mjs` + `start-cdp.cmd`/`restart-cdp.cmd` + 启动器参考文档；可执行文件路径走 `cdp/launch.config.json` |
-| 6 | `dsh-trae-channel-v0.3.7.zip` | `init-workspace --help` 不落盘、未知参数 exit 2；README 补「两侧各装一份」 |
-| 7 | `dsh-trae-channel-v0.3.6.zip` | |
-| 8 | `dsh-trae-channel-v0.3.5.zip` | `wake-dsh` 的默认路径可配置 |
-| 9 | `dsh-trae-channel-v0.3.4.zip` | 历史版本 |
-| 10 | `dsh-trae-channel-v0.3.3.zip` | |
-| 11 | `dsh-trae-channel-v0.3.2.zip` | |
-| 12 | `dsh-trae-channel-v0.3.1.zip` | 字节可复现版 |
-| 13 | `dsh-trae-channel-v0.3.0.zip` | 跨平台正斜杠重生版（98697 B），**不要**用 Release 里 96388 B 的旧 asset 在 macOS/Linux 回滚 |
-| 14 | `dsh-trae-channel-initial-a8f2a83.zip` | 初版（20 条目，`selftest` 27/28 为已知缺陷） |
+| 1 | `dsh-trae-channel-v0.3.13.zip` | 当前（`launch-cdp` 支持 `--root <工作区>` 与 `DSH_TRAE_ROOT`；`start-cdp.cmd`/`restart-cdp.cmd` 自己找工作区——`%DSH_TRAE_ROOT%` → `%~dp0` → 上两级 → `%CD%` 及 5 级祖先，找不到 **exit 8** 并给指引；修「cmd 拷到桌面后报 `Cannot find module ...\Desktop\tools\launch-cdp.mjs`」；`:try` 去尾反斜杠，修 `--root "%ROOT%"` 被转义成 `--check` 参数的坑；`selftest` launcher 守卫补 `--root` 坏值用例，仍 41/41） |
+| 2 | `dsh-trae-channel-v0.3.12.zip` | `mailbox` 读命令遇到不存在的信箱改为 `exit 5` 并给绝对路径提示，不再静默建空信箱；路径是文件时读/写都干净 `exit 5`；`wake-trae` 叫醒文案的绝对路径提醒加粗并写明后果；`mailbox-selftest` 12 → 15 项 |
+| 3 | `dsh-trae-channel-v0.3.11.zip` | `trae-inject send` 关闭 socket 后显式 `exit 0`，修「已送达却报未送达」；`wake-trae` 叫醒文案带「交付后必须回唤 DSH」契约；叫醒文案与 `mailbox`/`bus-cli` 全面改用绝对路径 `--dir`/`--bus`，修「执行端读到自己 cwd 下的另一份信箱/任务板」；接入卡 §11.4 由待定改为已启用） |
+| 4 | `dsh-trae-channel-v0.3.10.zip` | `SKILL.md` §一 安装布局的 `docs/` 说明补全为 4 个参考文档；纯文档修正 |
+| 5 | `dsh-trae-channel-v0.3.9.zip` | `init` 的文档清单改为按来源目录 `references/*.md` 实读，修掉包布局自检 39/40；`launch.config.json` 示例路径通用化 |
+| 6 | `dsh-trae-channel-v0.3.8.zip` | 新增 CDP 启动器 `launch-cdp.mjs` + `start-cdp.cmd`/`restart-cdp.cmd` + 启动器参考文档；可执行文件路径走 `cdp/launch.config.json` |
+| 7 | `dsh-trae-channel-v0.3.7.zip` | `init-workspace --help` 不落盘、未知参数 exit 2；README 补「两侧各装一份」 |
+| 8 | `dsh-trae-channel-v0.3.6.zip` | |
+| 9 | `dsh-trae-channel-v0.3.5.zip` | `wake-dsh` 的默认路径可配置 |
+| 10 | `dsh-trae-channel-v0.3.4.zip` | 历史版本 |
+| 11 | `dsh-trae-channel-v0.3.3.zip` | |
+| 12 | `dsh-trae-channel-v0.3.2.zip` | |
+| 13 | `dsh-trae-channel-v0.3.1.zip` | 字节可复现版 |
+| 14 | `dsh-trae-channel-v0.3.0.zip` | 跨平台正斜杠重生版（98697 B），**不要**用 Release 里 96388 B 的旧 asset 在 macOS/Linux 回滚 |
+| 15 | `dsh-trae-channel-initial-a8f2a83.zip` | 初版（20 条目，`selftest` 27/28 为已知缺陷） |
 
 - 装前核 `sha256sum <包>` 与发布记录；装后跑上面两条自检。
 - **渠道边界（公开）**：v0.3.5 起发布在新公开仓 `Myng-i/dsh-trae-channel`，Release 页面按 tag 取包。

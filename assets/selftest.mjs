@@ -534,17 +534,19 @@ knRun.code === 0 && knIds.includes("T-000009")
   : bad("nudge 注入后记门铃账本", JSON.stringify({ code: knRun.code, ids: knIds, err: knRun.err.slice(0, 80) }));
 try { fs.rmSync(kn, { recursive: true, force: true }); } catch {}
 
-// 21j) launch-cdp：--help exit 0、未知参数 exit 2、找不到可执行文件 exit 4，且失败路径不留 cdp/ 空状态
+// 21j) launch-cdp：--help exit 0（--root 坏值也 0）、未知参数 exit 2、--root 不存在 exit 2、找不到可执行文件 exit 4，且失败路径不留 cdp/ 空状态
 const LCH = path.join(HERE, "launch-cdp.mjs");
 const cdpBefore = fs.existsSync(path.join(HERE, "cdp"));
 const lchHelp = await run(LCH, ["--help"]);
+const lchHelpBadRoot = await run(LCH, ["--help", "--root", "Z:/no/such"]);
 const lchBad = await run(LCH, ["--bogus"]);
+const lchNoRoot = await run(LCH, ["--root", "Z:/no/such", "--check"]);
 const lchNoExe = await run(LCH, ["--only", "trae", "--trae-exe", "Z:/no/such/Trae.exe", "--check"]);
 const lchCdps = fs.existsSync(path.join(HERE, "cdp"));
-const lchOk = lchHelp.code === 0 && lchBad.code === 2 && lchNoExe.code === 4 && (cdpBefore || !lchCdps);
+const lchOk = lchHelp.code === 0 && lchHelpBadRoot.code === 0 && lchBad.code === 2 && lchNoRoot.code === 2 && lchNoExe.code === 4 && (cdpBefore || !lchCdps);
 lchOk
-  ? ok("launcher 守卫", "--help exit 0 不落盘；未知参数 exit 2；找不到 exe exit 4")
-  : bad("launcher 守卫", JSON.stringify({ help: lchHelp.code, bad: lchBad.code, noexe: lchNoExe.code, cdp: lchCdps }));
+  ? ok("launcher 守卫", "--help exit 0（--root 坏值也 0）不落盘；未知参数 exit 2；--root 不存在 exit 2；找不到 exe exit 4")
+  : bad("launcher 守卫", JSON.stringify({ help: lchHelp.code, helpBadRoot: lchHelpBadRoot.code, bad: lchBad.code, noRoot: lchNoRoot.code, noexe: lchNoExe.code, cdp: lchCdps }));
 
 srv.kill();
 setTimeout(() => {

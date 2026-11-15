@@ -4,7 +4,7 @@
 //   node release/build-zip.mjs --ref v0.3.1 --out ../dist/dsh-trae-channel-v0.3.1.zip
 //   node release/build-zip.mjs --worktree --out ../dist/x.zip
 // 约定: 包内只放技能负载(SKILL.md/README.md/LICENSE/.gitignore/assets/**,references/**)；
-//       .gitattributes 与 release/ 属仓库工具，不入包(保持 22 文件口径)。
+//       .gitattributes、release/、dist/ 属仓库工具/产物，不入包(保持 26 文件口径)。
 "use strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -15,7 +15,7 @@ import { fileURLToPath } from "node:url";
 
 const REPO = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const GIT = process.env.GIT || "git";
-const SKIP_TOP = new Set([".git", "release", ".gitattributes"]);
+const SKIP_TOP = new Set([".git", "release", "dist", ".gitattributes"]);
 
 function parseArgs(argv) {
   const out = { ref: null, worktree: false, out: null };

@@ -50,6 +50,54 @@ node tools/launch-cdp.mjs --dsh-port 9333 --trae-port 9332 --dsh-user-data-dir .
 
 都没有就 exit 4，并在输出里给出四条提示（参数 / 环境变量 / 配置文件 / 常见路径）。
 
+## 从别处运行（桌面快捷方式、别的 cwd）
+
+`launch-cdp.mjs` 默认把 `<脚本所在目录>/..` 当工作区，`--root <工作区>` 或环境变量 `DSH_TRAE_ROOT` 可覆盖。两个 `.cmd` 在调用启动器前先自己找一次工作区，顺序是：
+
+1. `%DSH_TRAE_ROOT%`
+2. `%~dp0`（cmd 所在目录）
+3. `%~dp0..`、`%~dp0..\..`
+4. `%CD%` 及其向上 5 级父目录
+
+判据是「该目录下存在 `tools\launch-cdp.mjs`」。找到就 `pushd "%ROOT%"` 并用绝对路径 `--root "%ROOT%"` 调启动器；找不到打印指引并 **exit 8**，不启动任何应用。
+
+| 放法 | 是否可用 | 说明 |
+|---|---|---|
+| 工作区根 | ✅ 推荐 | 直接双击 |
+| 已装布局 `<root>\tools\cmd\` | ✅ | 靠第 3 条向上两级找到 `<root>` |
+| 桌面 / 任意目录 | ⚠️ 需环境变量 | 纯拷贝只能靠 `%CD%` 祖先碰运气；要么 `set "DSH_TRAE_ROOT=<绝对工作区路径>"` 后再运行，要么放一个只做转发的包装器（见下） |
+
+桌面包装器（本机就是这样放的，工作区那份保持原样）：
+
+```bat
+@echo off
+set "DSH_TRAE_ROOT=C:\path\to\DSH-TRAE"
+if not exist "%DSH_TRAE_ROOT%\start-cdp.cmd" ( echo Workspace not found & pause & exit /b 8 )
+call "%DSH_TRAE_ROOT%\start-cdp.cmd" %*
+exit /b %ERRORLEVEL%
+```
+
+**尾反斜杠坑**：`%~dp0` 自带尾反斜杠。若直接写 `--root "%~dp0..\"`，Windows 会把末尾 `\"` 当成转义的双引号，node 实收的值变成 `...DSH-TRAE"  --check`，启动器报「工作区不存在」。`.cmd` 里先用 `for %%d in ("%~1") do set "ROOT=%%~fd"` 规范化，再逐字符去掉尾反斜杠。
+
+## 单文件版（只拷一个文件就能跑）
+
+`release/build-singlefile.mjs` 把 `assets/launch-cdp.mjs` 以 base64 嵌进一个 `.cmd`：运行时解到 `%LOCALAPPDATA%\dsh-trae-cdp\launch-cdp.mjs`（哈希没变就跳过解包），再以 `--root "%LOCALAPPDATA%\dsh-trae-cdp"` 调它。所以它**不需要同目录的 `tools/launch-cdp.mjs`，也不需要工作区**——放桌面、放 U 盘、改个名都能双击。
+
+```bat
+node release/build-singlefile.mjs --out dist/launch-cdp-single.cmd
+node release/build-singlefile.mjs --out "%USERPROFILE%\Desktop\start-cdp.cmd" \
+     --dsh-exe "<DeepSeek Harness 安装路径>" \
+     --trae-exe "<Trae CN 安装路径>"
+```
+
+| 事项 | 说明 |
+|---|---|
+| 需要 Node.js | 先找 `DSH_NODE` → `where node` → `%USERPROFILE%\.dsh\dsh-runtimes\...\node.exe` → `%ProgramFiles%\nodejs\node.exe`；都没有就 exit 8 并提示 |
+| 可执行文件 | 本机路径非标准时用 `--dsh-exe`/`--trae-exe` 烘进文件（写成 `DSH_EXE`/`TRAE_EXE` 默认值），或放 `%LOCALAPPDATA%\dsh-trae-cdp\launch.config.json` |
+| 状态文件 | 默认写到 `%LOCALAPPDATA%\dsh-trae-cdp\cdp\state.json`；要给某个工作区记账就传 `--root <工作区>`（参数在命令行上覆盖内置默认） |
+| 重开 | 双击不带参数时用 `--ask`：遇到「在跑但没开 CDP」会问 y/N 再关，不必另存一个 restart 文件 |
+| 退出码 | 与多文件版一致（0/2/3/4/5/6/7），另加 **exit 8**：Node 找不到 / 解包失败 / 工作区找不到（多文件版） |
+
 ## 三种状态怎么判
 
 - **ready**：进程在跑、端口通、UA 对上 → 只体检，不重启

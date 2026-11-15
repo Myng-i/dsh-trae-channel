@@ -14,6 +14,7 @@
  *   node tools/launch-cdp.mjs --only trae      # 只处理一个（dsh|trae|both）
  *   node tools/launch-cdp.mjs --dsh-port 9223 --trae-port 9222 --timeout 60
  *   node tools/launch-cdp.mjs --dsh-user-data-dir <目录>   # 独立 profile 起第二套（不动主实例）
+ *   node tools/launch-cdp.mjs --root <工作区>               # 从别处调用时指定工作区（也可用 DSH_TRAE_ROOT）
  *
  * 退出码：0 就绪 / 2 参数错 / 3 在跑但没开 CDP（或端口被别人占）/ 4 找不到可执行文件
  *         5 启动后端口没起来（超时）/ 6 CDP 探针失败 / 7 端口被其它程序占用
@@ -25,9 +26,10 @@ import { spawn, execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
-const ROOT = path.resolve(HERE, "..");
-const STATE_DIR = path.join(ROOT, "cdp");
-const STATE_FILE = path.join(STATE_DIR, "state.json");
+// ROOT / STATE_DIR / STATE_FILE 在解析完参数后再定（--root / DSH_TRAE_ROOT 可改工作区）
+let ROOT;
+let STATE_DIR;
+let STATE_FILE;
 const APPDATA = process.env.APPDATA || (process.env.USERPROFILE ? path.join(process.env.USERPROFILE, "AppData", "Roaming") : "");
 const LOCALAPPDATA = process.env.LOCALAPPDATA || (process.env.USERPROFILE ? path.join(process.env.USERPROFILE, "AppData", "Local") : "");
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -56,11 +58,11 @@ const APPS = {
 
 // ---------------- 参数 ----------------
 const KNOWN_FLAGS = new Set(["--check", "--dry", "--restart", "--ask", "--json", "--help", "-h"]);
-const KNOWN_VALUED = new Set(["--only", "--dsh-port", "--trae-port", "--timeout", "--dsh-exe", "--trae-exe", "--dsh-user-data-dir", "--trae-user-data-dir"]);
+const KNOWN_VALUED = new Set(["--only", "--dsh-port", "--trae-port", "--timeout", "--dsh-exe", "--trae-exe", "--dsh-user-data-dir", "--trae-user-data-dir", "--root"]);
 
 function parseArgs() {
   const a = { check: false, dry: false, restart: false, ask: false, json: false, help: false,
-    only: "both", dshPort: 9223, traePort: 9222, timeout: 60, exes: {}, udds: {} };
+    only: "both", dshPort: 9223, traePort: 9222, timeout: 60, exes: {}, udds: {}, root: "" };
   const argv = process.argv.slice(2);
   for (let i = 0; i < argv.length; i++) {
     const t = argv[i];
@@ -76,6 +78,7 @@ function parseArgs() {
       else if (t === "--timeout") a.timeout = Number(v);
       else if (t === "--dsh-exe") a.exes.dsh = v;
       else if (t === "--trae-exe") a.exes.trae = v;
+      else if (t === "--root") a.root = v;
       else if (t === "--dsh-user-data-dir") a.udds.dsh = v;
       else if (t === "--trae-user-data-dir") a.udds.trae = v;
       continue;
@@ -95,12 +98,21 @@ if (args.help) {
     "  node tools/launch-cdp.mjs [--only dsh|trae|both] [--check] [--dry] [--restart|--ask] [--json]",
     "      [--dsh-port 9223] [--trae-port 9222] [--timeout 60]",
     "      [--dsh-exe <路径>] [--trae-exe <路径>]",
-    "      [--dsh-user-data-dir <目录>] [--trae-user-data-dir <目录>]",
+    "      [--dsh-user-data-dir <目录>] [--trae-user-data-dir <目录>] [--root <工作区>]",
     "",
     "退出码：0 就绪 / 2 参数错 / 3 在跑但没开 CDP / 4 找不到可执行文件 / 5 超时 / 6 探针失败 / 7 端口被占",
   ].join("\n"));
   process.exit(0);
 }
+
+// 工作区（cdp/state.json 与 cdp/launch.config.json 的落点）：--root > DSH_TRAE_ROOT > 脚本上一级
+ROOT = path.resolve(args.root || process.env.DSH_TRAE_ROOT || path.join(HERE, ".."));
+if (!fs.existsSync(ROOT)) {
+  console.error("[cdp] 工作区不存在：" + ROOT + "（用 --root 或 DSH_TRAE_ROOT 指定）");
+  process.exit(2);
+}
+STATE_DIR = path.join(ROOT, "cdp");
+STATE_FILE = path.join(STATE_DIR, "state.json");
 
 if (!["both", "dsh", "trae"].includes(args.only)) { console.error("[cdp] --only 只能是 dsh / trae / both"); process.exit(2); }
 if (!Number.isInteger(args.dshPort) || args.dshPort < 1 || args.dshPort > 65535) { console.error("[cdp] --dsh-port 非法"); process.exit(2); }
@@ -178,7 +190,7 @@ function devtoolsPortFile(app, udd) {
 }
 
 // 机器相关的可执行文件路径不写包内：放 <root>/cdp/launch.config.json（cdp/ 默认 gitignore）
-// {"dshExe":"D:\\TOOL\\...\\DeepSeek Harness.exe","traeExe":"D:\\software\\Trae CN\\Trae CN.exe"}
+// {"dshExe":"<DeepSeek Harness 安装路径>","traeExe":"<Trae CN 安装路径>"}
 let CONFIG = null;
 function loadConfig() {
   if (CONFIG !== null) return CONFIG;
