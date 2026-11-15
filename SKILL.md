@@ -6,7 +6,7 @@ whenToUse: 用户要和 TRAE（或另一个编码 agent/另一台机器）分工
 
 # DSH ⇄ TRAE 零成本协作双通道
 
-版本 v0.3.13（tag `v0.3.13`）｜负载 26 文件
+版本 v0.3.14（tag `v0.3.14`）｜负载 26 文件
 
 两条通道分工明确，**不要混用**：
 
@@ -40,7 +40,7 @@ node tools/mailbox-selftest.mjs    # 15/15（含并发 id 唯一、游标语义�
 ```
 
 Windows 上 node 不在 PATH 时用绝对路径，例如
-`C:\Users\<you>\.dsh\dsh-runtimes\dsh-primary-runtime\dependencies\node\bin\node.exe`。
+`%USERPROFILE%\.dsh\dsh-runtimes\dsh-primary-runtime\dependencies\node\bin\node.exe`。
 
 ## 二、每轮开始的两条命令（执行端必做）
 
@@ -338,7 +338,7 @@ node tools/nudge.mjs --reset               # 清空 watch/nudge.json（不碰任
 安装后自检三条，任一不符就停手：
 
 ```bash
-ls <技能目录> | wc -l                 # 负载文件数（v0.3.5 / v0.3.6 / v0.3.7 = 22；v0.3.8–v0.3.12 = 26 文件，含 assets/ 16 个 .mjs + 2 个 .cmd，无 tools/）
+ls <技能目录> | wc -l                 # 负载文件数（v0.3.5 / v0.3.6 / v0.3.7 = 22；v0.3.8–v0.3.14 = 26 文件，含 assets/ 16 个 .mjs + 2 个 .cmd，无 tools/）
 node tools/selftest.mjs               # 期望 ALL PASS 41/41，exit 0
 node tools/mailbox-selftest.mjs       # 期望 ALL PASS 15/15，exit 0
 ```
@@ -347,21 +347,22 @@ node tools/mailbox-selftest.mjs       # 期望 ALL PASS 15/15，exit 0
 
 | 顺序 | 包 | 说明 |
 |---|---|---|
-| 1 | `dsh-trae-channel-v0.3.13.zip` | 当前（`launch-cdp` 支持 `--root <工作区>` 与 `DSH_TRAE_ROOT`；`start-cdp.cmd`/`restart-cdp.cmd` 自己找工作区——`%DSH_TRAE_ROOT%` → `%~dp0` → 上两级 → `%CD%` 及 5 级祖先，找不到 **exit 8** 并给指引；修「cmd 拷到桌面后报 `Cannot find module ...\Desktop\tools\launch-cdp.mjs`」；`:try` 去尾反斜杠，修 `--root "%ROOT%"` 被转义成 `--check` 参数的坑；`selftest` launcher 守卫补 `--root` 坏值用例，仍 41/41） |
-| 2 | `dsh-trae-channel-v0.3.12.zip` | `mailbox` 读命令遇到不存在的信箱改为 `exit 5` 并给绝对路径提示，不再静默建空信箱；路径是文件时读/写都干净 `exit 5`；`wake-trae` 叫醒文案的绝对路径提醒加粗并写明后果；`mailbox-selftest` 12 → 15 项 |
-| 3 | `dsh-trae-channel-v0.3.11.zip` | `trae-inject send` 关闭 socket 后显式 `exit 0`，修「已送达却报未送达」；`wake-trae` 叫醒文案带「交付后必须回唤 DSH」契约；叫醒文案与 `mailbox`/`bus-cli` 全面改用绝对路径 `--dir`/`--bus`，修「执行端读到自己 cwd 下的另一份信箱/任务板」；接入卡 §11.4 由待定改为已启用） |
-| 4 | `dsh-trae-channel-v0.3.10.zip` | `SKILL.md` §一 安装布局的 `docs/` 说明补全为 4 个参考文档；纯文档修正 |
-| 5 | `dsh-trae-channel-v0.3.9.zip` | `init` 的文档清单改为按来源目录 `references/*.md` 实读，修掉包布局自检 39/40；`launch.config.json` 示例路径通用化 |
-| 6 | `dsh-trae-channel-v0.3.8.zip` | 新增 CDP 启动器 `launch-cdp.mjs` + `start-cdp.cmd`/`restart-cdp.cmd` + 启动器参考文档；可执行文件路径走 `cdp/launch.config.json` |
-| 7 | `dsh-trae-channel-v0.3.7.zip` | `init-workspace --help` 不落盘、未知参数 exit 2；README 补「两侧各装一份」 |
-| 8 | `dsh-trae-channel-v0.3.6.zip` | |
-| 9 | `dsh-trae-channel-v0.3.5.zip` | `wake-dsh` 的默认路径可配置 |
-| 10 | `dsh-trae-channel-v0.3.4.zip` | 历史版本 |
-| 11 | `dsh-trae-channel-v0.3.3.zip` | |
-| 12 | `dsh-trae-channel-v0.3.2.zip` | |
-| 13 | `dsh-trae-channel-v0.3.1.zip` | 字节可复现版 |
-| 14 | `dsh-trae-channel-v0.3.0.zip` | 跨平台正斜杠重生版（98697 B），**不要**用 Release 里 96388 B 的旧 asset 在 macOS/Linux 回滚 |
-| 15 | `dsh-trae-channel-initial-a8f2a83.zip` | 初版（20 条目，`selftest` 27/28 为已知缺陷） |
+| 1 | `dsh-trae-channel-v0.3.14.zip` | 当前（`SKILL.md` 新增 §十七 发布流程**七步**：定候选 → 送审 → 定稿 → **发布授权闸** → 发布 → **再授权安装** → 复核；`check-skill-parity` 标注「仅开发工作区可用、不随包发布」；§十五 自检口径补到 v0.3.13；node 路径改 `%USERPROFILE%` 占位；纯文档，自检 41/41 + 15/15 不变） |
+| 2 | `dsh-trae-channel-v0.3.13.zip` | `launch-cdp` 支持 `--root <工作区>` 与 `DSH_TRAE_ROOT`；`start-cdp.cmd`/`restart-cdp.cmd` 自己找工作区——`%DSH_TRAE_ROOT%` → `%~dp0` → 上两级 → `%CD%` 及 5 级祖先，找不到 **exit 8** 并给指引；修「cmd 拷到桌面后报 `Cannot find module ...\Desktop\tools\launch-cdp.mjs`」；`:try` 去尾反斜杠，修 `--root "%ROOT%"` 被转义成 `--check` 参数的坑；`selftest` launcher 守卫补 `--root` 坏值用例，仍 41/41 |
+| 3 | `dsh-trae-channel-v0.3.12.zip` | `mailbox` 读命令遇到不存在的信箱改为 `exit 5` 并给绝对路径提示，不再静默建空信箱；路径是文件时读/写都干净 `exit 5`；`wake-trae` 叫醒文案的绝对路径提醒加粗并写明后果；`mailbox-selftest` 12 → 15 项 |
+| 4 | `dsh-trae-channel-v0.3.11.zip` | `trae-inject send` 关闭 socket 后显式 `exit 0`，修「已送达却报未送达」；`wake-trae` 叫醒文案带「交付后必须回唤 DSH」契约；叫醒文案与 `mailbox`/`bus-cli` 全面改用绝对路径 `--dir`/`--bus`，修「执行端读到自己 cwd 下的另一份信箱/任务板」；接入卡 §11.4 由待定改为已启用） |
+| 5 | `dsh-trae-channel-v0.3.10.zip` | `SKILL.md` §一 安装布局的 `docs/` 说明补全为 4 个参考文档；纯文档修正 |
+| 6 | `dsh-trae-channel-v0.3.9.zip` | `init` 的文档清单改为按来源目录 `references/*.md` 实读，修掉包布局自检 39/40；`launch.config.json` 示例路径通用化 |
+| 7 | `dsh-trae-channel-v0.3.8.zip` | 新增 CDP 启动器 `launch-cdp.mjs` + `start-cdp.cmd`/`restart-cdp.cmd` + 启动器参考文档；可执行文件路径走 `cdp/launch.config.json` |
+| 8 | `dsh-trae-channel-v0.3.7.zip` | `init-workspace --help` 不落盘、未知参数 exit 2；README 补「两侧各装一份」 |
+| 9 | `dsh-trae-channel-v0.3.6.zip` | |
+| 10 | `dsh-trae-channel-v0.3.5.zip` | `wake-dsh` 的默认路径可配置 |
+| 11 | `dsh-trae-channel-v0.3.4.zip` | 历史版本 |
+| 12 | `dsh-trae-channel-v0.3.3.zip` | |
+| 13 | `dsh-trae-channel-v0.3.2.zip` | |
+| 14 | `dsh-trae-channel-v0.3.1.zip` | 字节可复现版 |
+| 15 | `dsh-trae-channel-v0.3.0.zip` | 跨平台正斜杠重生版（98697 B），**不要**用 Release 里 96388 B 的旧 asset 在 macOS/Linux 回滚 |
+| 16 | `dsh-trae-channel-initial-a8f2a83.zip` | 初版（20 条目，`selftest` 27/28 为已知缺陷） |
 
 - 装前核 `sha256sum <包>` 与发布记录；装后跑上面两条自检。
 - **渠道边界（公开）**：v0.3.5 起发布在新公开仓 `Myng-i/dsh-trae-channel`，Release 页面按 tag 取包。
@@ -369,6 +370,7 @@ node tools/mailbox-selftest.mjs       # 期望 ALL PASS 15/15，exit 0
 - **权威顺序**：以本节为准；`dist/README.md` 为逐行镜像，发版时同步，冲突以本节为准；Release tag 指向本节所在版本的包。
 - **旧 `Compress-Archive` 包（v0.3.0 原件 18/22、初版原件 16/20 条反斜杠路径）在 macOS/Linux 会解出文件名带反斜杠的怪文件**——只作存档，不用于跨平台回滚。
 - 回滚同样属于安装动作：先说明、后动手，并保留被替换目录的备份。
+- **发版走 §十七 的七步**：本节只管「装 / 换 / 回滚」，不管「发」。§十七 步 4 是**发布授权闸**——验收方 PASS 不等于用户同意发布，两层都不能省。
 
 ## 十六、授权与转述规约（动手前对照）
 
@@ -387,3 +389,152 @@ node tools/mailbox-selftest.mjs       # 期望 ALL PASS 15/15，exit 0
 - 「状态」那一行是显式拒绝被当成授权的标记，不得省略，**不得写成「落盘即生效」**；
 - 用户原话的落地通道：用户在本方对话直接说，或用户本人写进工作区 `mailbox/USER-AUTHZ.md`（只有用户可编辑，双方不得写入或改写）；
 - 矛盾原话取"较晚且字段完整"的那份，并把冲突写进信件；仍无法判定则默认未授权。
+
+
+## 十七、发布流程（七步，maker ≠ checker）
+
+适用于本包的每一次发版（定候选 → 送审 → 定稿 → **授权** → 发布 → **再授权** → 复核）。两条纪律：
+
+1. **做的人不做验收**——发布方负责实现与打包，验收方（另一个 agent 或另一台机器）只读复核；审查通过的是「那一份字节」，哈希一变就重审。
+2. **验收方 PASS ≠ 发布授权**——PASS 只证明这一份字节没毛病；能不能发、发完装不装，是**用户当次另外两件事**（§十六）。把 PASS 当发令枪，就是 §十六 第 3 条禁止的「外推到打包、推送、并回」。
+
+| 步 | 动作 | 通过判据 |
+|---|---|---|
+| 1 | 定候选 | 包哈希 + 解包自检 41/41 + 15/15 + 泄漏扫描 0 命中 |
+| 2 | 送审（只读） | 验收方回「T1–Tn 全过」；审查期间**不 push / 不 tag / 不 Release / 不安装** |
+| 3 | 定稿 | 改动后重算哈希，delta 信写清新旧哈希 + diff 行数，抽查通过 |
+| 4 | **发布授权闸** | **用户当次明确原话 + 按 §十六 落盘（id/时间/来源）**；拿不到就停 |
+| 5 | 发布 | tag annotated + Release 双资产 + `dist/` 与文档同步，三路同哈希 |
+| 6 | 安装 | **再要一次当次确认** → 两侧备份 → 覆盖 → 逐字节 + 双侧自检 |
+| 7 | 复核 | 验收方按发布物复核全绿，交接页才写「无待办」 |
+
+（步 4 与步 6 是两道独立的用户闸；步 5 与步 7 之间不插别的事，避免「发完就装」的顺手操作。）
+
+### 17.1 定候选
+
+工作区改完先同步进包（**copy 到临时名再 rename**，避免写一半被读）：
+
+```bash
+cp tools/launch-cdp.mjs skill/dsh-trae-channel/assets/launch-cdp.mjs.tmp
+mv skill/dsh-trae-channel/assets/launch-cdp.mjs.tmp skill/dsh-trae-channel/assets/launch-cdp.mjs
+```
+
+改完必做四件事：
+
+1. **泄漏扫描**：包内不得出现本机绝对路径。模式至少含四类——真实用户目录（`<盘符>:\Users\<用户名>` 的两种斜杠写法）、用户名本身、仓库父目录名、工具链安装目录（如 `<盘符>:/TOOL`、`<盘符>:/software`、`<盘符>:/Tools`）、本机代理端口。命中数必须为 0，错误提示里的示例路径也要换成占位符。
+
+   ```bash
+   grep -rnE '[A-Za-z]:[\\/](Users|TOOL|software|Tools)' .     # 盘符路径
+   grep -rn '<你的用户名>' .                                    # 用户名
+   ```
+
+2. **确定性打包**：用 `release/build-zip.mjs`，**禁用 `git archive`**（.gitattributes / 行尾转换会改哈希）。
+3. **解包自检**：解到临时目录 → `init-workspace --root <临时>` → `selftest` 41/41、`mailbox-selftest` 15/15、`launch-cdp.mjs --help` exit 0 且不建 `cdp/`。
+4. **三份一致**（仅开发工作区）：`check-skill-parity` 比较工作区 `tools/` 与包源 `assets/`。**这个脚本不随包发布**——装到本机的副本没有它，别照抄这一步；装入侧的一致性用「逐文件 sha256 比对 + 双侧 41/41 / 15/15」代替（§十七 步 6）。
+
+```bash
+NODE=<node 可执行文件>; GIT=<git 可执行文件>
+cd <仓库根>
+$NODE release/build-zip.mjs --worktree --out /tmp/cand.zip          # --out 必填
+$NODE release/build-zip.mjs --ref <候选 commit> --out /tmp/verify.zip
+sha256sum /tmp/cand.zip /tmp/verify.zip                              # 必须同哈希（Windows 用 Get-FileHash -Algorithm SHA256）
+```
+
+单文件启动器随后重打（内嵌的 base64 必须与 `assets/launch-cdp.mjs` 逐字节相同）：
+
+```bash
+$NODE release/build-singlefile.mjs --out dist/launch-cdp-single.cmd
+$NODE release/build-singlefile.mjs --out <桌面路径>/start-cdp.cmd --dsh-exe "<DSH 安装路径>" --trae-exe "<TRAE 安装路径>"
+```
+
+### 17.2 送审（只读，maker ≠ checker）
+
+发一封 `[review]` 信（信箱通道，见 §四），正文只给可复核的东西：
+
+- 候选 commit / 包大小与 sha256 / 26 条目 / 反斜杠 0；
+- 编号验收项 T1…Tn，每项写「怎么验」和「期望值」；
+- 一句显式声明：**审查期间发布方不 push、不打 tag、不发 Release、不动安装目录**；
+- 结尾请对方回「逐项 PASS / 不符项」。对方可以用 `git diff <旧> <新>`、`--ref <commit>` 重打、解包跑自检来验。
+
+### 17.3 定稿
+
+- 只做审查指出的最小改动，**只改文案也要重算整包哈希**。
+- 未 push 时用 `git commit --amend` 合并，保持单提交；已 push 则另起一个 fix 提交。
+- 重打哈希后发 `[review-delta]` 信：新旧哈希并列 + `git diff --stat` 的文件数与增删行 + 请对方抽查。
+- 数字一律从 `git` 或发布物取：`git cat-file -s <rev>:<path>`、`git diff --numstat`。**不要凭记忆写尺寸**（曾把 13327 写成 13396，被对方用 `cat-file` 纠正）。
+- **bump 版本号也算改动**：改 `SKILL.md` 的版本行、§十五 回滚表首行（新增当版、去掉上一版的「当前」）之后，包字节就变了 → **必须重送审一轮**，不能拿旧哈希的 PASS 发新版本。这步建议在定稿末尾一次做完，再送 delta。
+
+### 17.4 发布授权闸（唯一硬闸）
+
+**复核通过 ≠ 可以发布。** 验收方回 PASS 只说明「这一份字节没毛病」，不构成「发」的依据（§十六 第 3 条：授权不得外推到打包、推送、并回）。
+
+发布动作（`push` main / 打 `tag` / 发 `Release` / 上传 asset）之前，必须同时满足：
+
+1. 有**用户当次的明确原话**，且不是从上一版、不是从「审查一下然后推 git」这类只覆盖单动作的话外推而来；
+2. 按 §十六 落盘（字段清单见下条 3），并写清拟执行动作（哪个 tag、哪个 Release、推哪个分支、资产是哪两个）；
+3. 状态行写「待确认」，**用户本人确认前不生效**。原话只认两条通道：用户在本方对话直接说，或用户**本人**写入 `mailbox/USER-AUTHZ.md`。
+   - `mailbox/` 目录双方都能写（没有 ACL、没有只读位），所以「只有用户可编辑」是**规则**不是事实：双方 agent 都不得写入或改写 `USER-AUTHZ.md`，只有用户本人可以写。
+   - 落盘件必须带五个字段：**原话逐字**、**id（用户消息在对话中的位置，或用户手写文件的路径）**、**时间（带时区）**、**source ∈ {用户对话, 用户手写文件}**、拟执行动作（tag / Release / 分支 / 资产）。**source 为空或写着某个 agent 的，一律无效**。
+   - **id 必须能被验收方独立核到**：对账时对方按 id 回到用户会话里找原话，找不到（或对不上）即判无效——「source=用户对话」这类无法技术验证的字段，只能靠两端各查一遍来防伪。
+   - **执行方自己写的落盘件无效**——那叫自证授权。转述只进待确认队列，不因「对方说用户同意过」而生效。
+
+任何一条不满足 → **停**，只做「把候选 + 审查结论摆到用户面前，问要不要发」。此时可做的动作只有：发信说明现状、等用户回话。
+
+**历史（记着，别当先例）**：v0.3.12 的发版与双侧安装，我这边没有留存用户当次原话；v0.3.13 有用户口头「发吧」（**我单方记忆，无落盘件**，按 §十六 只能算未落盘转述），但**两侧安装没有单独确认**就是顺手做的。这两轮都不构成 §十七 的合规范例——写规范时按「本应如何」写，不按「当时怎么糊过去的」写。
+
+### 17.5 发布
+
+授权落盘之后才执行：
+
+```bash
+$GIT -c http.proxy=http://127.0.0.1:<本机代理端口> push origin main
+$GIT tag -a vX.Y.Z -m "vX.Y.Z" && $GIT -c http.proxy=http://127.0.0.1:<本机代理端口> push origin vX.Y.Z
+gh release create vX.Y.Z dist/dsh-trae-channel-vX.Y.Z.zip dist/launch-cdp-single.cmd \
+  --title "vX.Y.Z — <一句话>" --notes-file /tmp/release-notes.md
+```
+
+（资产路径就用带版本号的文件名：`gh release create` 取的是**文件名**当资产名，传 `/tmp/cand.zip` 上去就叫 `cand.zip`，与「资产名带版本号」的要求冲突。）
+
+发布要同时做完这五件，缺一件就是「发布漂移」：
+
+1. tag 用 **annotated**（`git cat-file -t refs/tags/vX.Y.Z` 应为 `tag`），peeled 指向发布 commit；
+2. Release 为非 draft / 非 pre，资产名带版本号（`dsh-trae-channel-vX.Y.Z.zip`）；
+3. `dist/` 归档当版 zip 与单文件启动器；
+4. `dist/README.md` 的版本表 + 回滚顺序 + 校验注（包数 / 条目数）同步，且与包内 §十五 **同序同名**；
+5. 交接页新增小节、`docs/发布-vX.Y.Z.md`、工作区 `README.md` 的发布点三处对齐。
+
+发布后立刻做一次程序化对账（别用眼睛看）：REST `digest` = `--worktree` = `--ref <tag>` 三路同哈希；`dist/README.md` 版本表前 N 行与包内 §十五 逐行比对为 `true`；表内「当前」标记只有 1 处。
+
+### 17.6 安装（发布 ≠ 安装，要第二次授权）
+
+安装是**另一个独立动作**，必须**再向用户单独说明并获得当次确认**——「上一轮同意发版」不算，「asset 已经发布」也不算（§十五、§十六 同口径）。确认同样按 §十六 三件套落盘：原话 + id + 时间 + 来源，写清装到哪两侧、从哪个包、备份放哪。
+
+流程：
+
+1. 两侧各建带前导点的备份目录（`<技能根>/.dsh-trae-channel.backup-v<旧版>-<时间戳>-<侧>`），确认备份文件数 = 26；
+2. 解包覆盖，逐文件 sha256 比对差异必须为 0；
+3. 两侧各跑 `init-workspace --root <临时>` → 41/41 + 15/15 + `--help` exit 0；
+4. 两侧安装副本相互逐字节一致（包内没有 `check-skill-parity`，别照抄开发期那一步）；
+5. 桌面单文件启动器若已生成，用当次发布物重建（它的内嵌 base64 是硬编码的，不重建就还是旧代码）。
+
+### 17.7 复核（对方签字才算收口）
+
+发 `[release]` 信列五项，请对方回执：
+
+1. Release 两个资产的 REST digest 与正文写的是否一致（含条目数、反斜杠）；
+2. 下载 asset → 解包 → init + 41/41 + 15/15；`--ref <tag>` 重打是否同哈希；
+3. 两侧安装目录 26 文件与发布物逐字节（重点 `SKILL.md` 尺寸/哈希），备份点是否完整；
+4. `dist/README.md` 表与包内 §十五 同序同名、回滚编号连续、「当前」唯一；
+5. 远端 `main` = 发布 commit、tag 存在、无遗留 draft。
+
+全绿才在交接页写「无待办」。发现偏差：先修 + 发 delta 重审，**不回退已发布物**（除非用户明确点头）。
+
+### 17.8 七条硬规则（都是踩过的坑）
+
+1. **禁用 `git archive` 打包**：CRLF/属性变化会改哈希，跨平台解出的字节也会变。
+2. **push 与 Release 都走代理**：`git -c http.proxy=http://127.0.0.1:<本机代理端口> push`（直连常报 `Failed to connect to github.com port 443` 或 `Connection was reset`）；gh 还需 PATH 含 Git 目录 + `APPDATA`/`LOCALAPPDATA`/`USERPROFILE`/`HOME`，否则报 `unable to find git executable in PATH`。
+3. **尺寸/哈希从对象里取**，不背数字：`git cat-file -s <rev>:<path>`、`sha256sum`、REST `digest`。
+4. **只改文案也要重审**：审查通过的是字节，不是意图；bump 版本号同样算改字节。
+5. **PASS 不是发令枪**：验收方 PASS → 步 4 授权闸 → 才能发布；「他都说没问题了」不构成授权。
+6. **信里不预写回信 id**，路径一律程序拼接；发信后检查正文非空（空正文事故已发生过）。
+7. **两侧安装副本必须与包源同步**：曾只改源目录却跑到安装副本，测出「未捕获异常 stack」的假结果；改完先比字节。
